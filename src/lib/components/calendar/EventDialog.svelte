@@ -1,0 +1,334 @@
+<script lang="ts">
+	import { enhance } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
+
+	let {
+		open = $bindable(false),
+		event = null,
+		categories = [],
+		userRole = 'teacher',
+		schoolId = '',
+		onclose
+	}: {
+		open: boolean;
+		event?: Record<string, any> | null;
+		categories: Array<{ id: string; name: string; color: string; icon: string }>;
+		userRole: string;
+		schoolId: string;
+		onclose?: () => void;
+	} = $props();
+
+	let loading = $state(false);
+	let formError = $state('');
+
+	const isEditing = $derived(!!event?.id);
+	const actionUrl = $derived(isEditing ? '?/updateEvent' : '?/createEvent');
+
+	// Default form state
+	let title = $state('');
+	let description = $state('');
+	let startsAt = $state('');
+	let endsAt = $state('');
+	let allDay = $state(false);
+	let location = $state('');
+	let categoryId = $state('');
+	let visibility = $state('private');
+
+	// Populate form when editing
+	$effect(() => {
+		if (event) {
+			title = event.title ?? '';
+			description = event.description ?? '';
+			startsAt = event.starts_at ? event.starts_at.slice(0, 16) : '';
+			endsAt = event.ends_at ? event.ends_at.slice(0, 16) : '';
+			allDay = event.all_day ?? false;
+			location = event.location ?? '';
+			categoryId = event.category_id ?? '';
+			visibility = event.visibility ?? 'private';
+		} else {
+			title = '';
+			description = '';
+			startsAt = '';
+			endsAt = '';
+			allDay = false;
+			location = '';
+			categoryId = '';
+			visibility = 'private';
+		}
+		formError = '';
+	});
+
+	function close() {
+		open = false;
+		onclose?.();
+	}
+
+	function handleBackdropClick(e: MouseEvent) {
+		if ((e.target as HTMLElement).classList.contains('dialog-backdrop')) close();
+	}
+</script>
+
+{#if open}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="dialog-backdrop" onclick={handleBackdropClick}>
+		<div class="dialog event-dialog" role="dialog" aria-modal="true" aria-labelledby="event-dialog-title">
+			<div class="dialog-header">
+				<h2 class="dialog-title" id="event-dialog-title">
+					{isEditing ? 'Editar Evento' : 'Nuevo Evento'}
+				</h2>
+				<button class="dialog-close" onclick={close} aria-label="Cerrar">
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+					</svg>
+				</button>
+			</div>
+
+			{#if formError}
+				<div class="alert-inline alert-error">{formError}</div>
+			{/if}
+
+			<form
+				method="POST"
+				action={actionUrl}
+				use:enhance={() => {
+					loading = true;
+					formError = '';
+					return async ({ result, update }) => {
+						loading = false;
+						if (result.type === 'success') {
+							await invalidateAll();
+							close();
+						} else if (result.type === 'failure') {
+							formError = (result.data?.error as string) ?? 'Error al guardar el evento.';
+						} else {
+							await update();
+						}
+					};
+				}}
+			>
+				{#if isEditing}
+					<input type="hidden" name="id" value={event?.id} />
+				{/if}
+
+				<!-- Title -->
+				<div class="form-group">
+					<label class="input-label" for="event-title">
+						Título <span class="required">*</span>
+					</label>
+					<input
+						id="event-title"
+						name="title"
+						type="text"
+						class="input"
+						placeholder="Ej: Reunión de padres, Capacitación docente..."
+						bind:value={title}
+						required
+						maxlength="150"
+					/>
+				</div>
+
+				<!-- Category -->
+				<div class="form-group">
+					<label class="input-label" for="event-category">Categoría</label>
+					<div class="category-grid">
+						{#each categories as cat}
+							<label class="category-option" class:selected={categoryId === cat.id}>
+								<input
+									type="radio"
+									name="category_id"
+									value={cat.id}
+									bind:group={categoryId}
+									hidden
+								/>
+								<span class="cat-dot" style="background: {cat.color}"></span>
+								<span class="cat-name">{cat.name}</span>
+							</label>
+						{/each}
+					</div>
+					<!-- Hidden fallback if no category selected -->
+					{#if !categoryId}
+						<input type="hidden" name="category_id" value="" />
+					{/if}
+				</div>
+
+				<!-- Dates -->
+				<div class="form-row">
+					<div class="form-group">
+						<label class="input-label" for="event-start">
+							Inicio <span class="required">*</span>
+						</label>
+						<input
+							id="event-start"
+							name="starts_at"
+							type={allDay ? 'date' : 'datetime-local'}
+							class="input"
+							bind:value={startsAt}
+							required
+						/>
+					</div>
+					<div class="form-group">
+						<label class="input-label" for="event-end">Fin</label>
+						<input
+							id="event-end"
+							name="ends_at"
+							type={allDay ? 'date' : 'datetime-local'}
+							class="input"
+							bind:value={endsAt}
+							min={startsAt}
+						/>
+					</div>
+				</div>
+
+				<!-- All day toggle -->
+				<div class="form-group">
+					<label class="toggle-wrapper">
+						<div class="toggle">
+							<input type="checkbox" name="all_day" bind:checked={allDay} value="true" />
+							<div class="toggle-track"></div>
+							<div class="toggle-thumb"></div>
+						</div>
+						<span class="toggle-label">Todo el día</span>
+					</label>
+				</div>
+
+				<!-- Location -->
+				<div class="form-group">
+					<label class="input-label" for="event-location">Ubicación</label>
+					<input
+						id="event-location"
+						name="location"
+						type="text"
+						class="input"
+						placeholder="Aula 3, Sala de reuniones, Virtual..."
+						bind:value={location}
+					/>
+				</div>
+
+				<!-- Description -->
+				<div class="form-group">
+					<label class="input-label" for="event-desc">Descripción</label>
+					<textarea
+						id="event-desc"
+						name="description"
+						class="input textarea"
+						placeholder="Detalles del evento..."
+						bind:value={description}
+						rows="3"
+					></textarea>
+				</div>
+
+				<!-- Visibility (only directors can set 'school') -->
+				{#if userRole === 'director' || userRole === 'admin'}
+					<div class="form-group">
+						<label class="input-label" for="event-visibility">Visibilidad</label>
+						<select id="event-visibility" name="visibility" class="input" bind:value={visibility}>
+							<option value="private">Solo yo</option>
+							<option value="school">Toda la institución</option>
+						</select>
+					</div>
+				{:else}
+					<input type="hidden" name="visibility" value="private" />
+				{/if}
+
+				<!-- Actions -->
+				<div class="dialog-actions">
+					<button type="button" class="btn btn-ghost" onclick={close}>
+						Cancelar
+					</button>
+					<button type="submit" class="btn btn-primary" disabled={loading} id={isEditing ? 'btn-update-event' : 'btn-create-event'}>
+						{#if loading}
+							<span class="spinner"></span>
+							Guardando...
+						{:else}
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								{#if isEditing}
+									<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+									<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+								{:else}
+									<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+								{/if}
+							</svg>
+							{isEditing ? 'Actualizar' : 'Crear Evento'}
+						{/if}
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
+{/if}
+
+<style>
+	.event-dialog { max-width: 560px; }
+
+	.alert-inline {
+		padding: 0.625rem 1rem;
+		border-radius: var(--radius-md);
+		font-size: 0.875rem;
+		margin-bottom: 1rem;
+	}
+	.alert-error {
+		background: rgba(239,68,68,0.1);
+		border: 1px solid rgba(239,68,68,0.25);
+		color: #fca5a5;
+	}
+
+	.required { color: var(--color-danger); }
+
+	.category-grid {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		margin-top: 0.25rem;
+	}
+	.category-option {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.35rem 0.75rem;
+		border-radius: 999px;
+		border: 1px solid var(--border-default);
+		background: var(--bg-overlay);
+		cursor: pointer;
+		font-size: 0.8125rem;
+		color: var(--text-secondary);
+		transition: all var(--transition-fast);
+	}
+	.category-option:hover {
+		border-color: var(--border-strong);
+		color: var(--text-primary);
+	}
+	.category-option.selected {
+		border-color: var(--color-primary);
+		background: rgba(99,102,241,0.1);
+		color: #a5b4fc;
+	}
+	.cat-dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		flex-shrink: 0;
+	}
+	.cat-name { white-space: nowrap; }
+
+	.textarea {
+		resize: vertical;
+		min-height: 80px;
+		font-family: inherit;
+	}
+
+	.toggle-label {
+		font-size: 0.875rem;
+		color: var(--text-secondary);
+		cursor: pointer;
+	}
+
+	.dialog-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 0.75rem;
+		margin-top: 1.5rem;
+		padding-top: 1rem;
+		border-top: 1px solid var(--border-subtle);
+	}
+</style>

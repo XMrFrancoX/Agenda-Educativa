@@ -1,0 +1,17 @@
+node_modules/
+.svelte-kit/
+build/
+dist/
+.env
+.env.local
+*.local
+.DS_Store
+Thumbs.db
+*.log
+.wrangler/
+.cloudflare/
+
+# Ignorar archivos SQL (migraciones, dumps, etc.)
+*.sql
+supabase/migrations/
+scratch/
