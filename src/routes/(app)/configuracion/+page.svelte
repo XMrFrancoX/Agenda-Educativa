@@ -8,9 +8,24 @@
 	let prefs = $state({ ...(data.preferences ?? {}) });
 	let saving = $state(false);
 	let saved = $state(false);
-
 	let newCatName = $state('');
 	let newCatColor = $state('#6366f1');
+
+	const roleLabel: Record<string, string> = {
+		teacher: 'Docente',
+		director: 'Director/a',
+		admin: 'Administrador',
+		student: 'Alumno/a',
+		tutor: 'Tutor/a'
+	};
+
+	const roleClass: Record<string, string> = {
+		teacher: 'role-teacher',
+		director: 'role-director',
+		admin: 'role-admin',
+		student: 'role-student',
+		tutor: 'role-tutor'
+	};
 
 	async function savePreferences() {
 		saving = true;
@@ -53,8 +68,8 @@
 				<div>
 					<p class="profile-name-lg">{data.profile?.full_name ?? '—'}</p>
 					<p class="profile-email-lg">{data.user?.email}</p>
-					<span class="badge {data.profile?.role === 'director' ? 'role-director' : 'role-teacher'}" style="margin-top:.5rem;display:inline-block">
-						{data.profile?.role === 'director' ? 'Director/a' : 'Docente'}
+					<span class="badge {roleClass[data.profile?.role ?? 'teacher']}" style="margin-top:.5rem;display:inline-block">
+						{roleLabel[data.profile?.role ?? 'teacher']}
 					</span>
 				</div>
 			</div>
