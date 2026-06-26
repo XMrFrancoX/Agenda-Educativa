@@ -17,6 +17,10 @@
 	let showTeacher = $state(data.preferences?.show_teacher_events ?? false);
 	let togglingTeacher = $state(false);
 
+	$effect(() => {
+		console.log('Events from DB:', data.events);
+	});
+
 	const isDirector = $derived(data.profile?.role === 'director' || data.profile?.role === 'admin');
 
 	// Map DB events → FullCalendar event format
@@ -188,6 +192,7 @@
 	bind:open={showEventDialog}
 	event={editingEvent}
 	categories={data.categories}
+	groups={data.groups}
 	userRole={data.profile?.role ?? 'teacher'}
 	schoolId={data.profile?.school_id ?? ''}
 	onclose={() => { editingEvent = null; }}

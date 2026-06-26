@@ -13,6 +13,7 @@
 		open: boolean;
 		event?: Record<string, any> | null;
 		categories: Array<{ id: string; name: string; color: string; icon: string }>;
+		groups?: Array<{ id: string; name: string }>;
 		userRole: string;
 		schoolId: string;
 		onclose?: () => void;
@@ -33,6 +34,12 @@
 	let location = $state('');
 	let categoryId = $state('');
 	let visibility = $state('private');
+	let groupId = $state('');
+
+	let showNewCat = $state(false);
+	let newCatName = $state('');
+	let newCatColor = $state('#6366f1');
+	let creatingCat = $state(false);
 
 	// Populate form when editing
 	$effect(() => {
@@ -134,18 +141,48 @@
 					<div class="category-grid">
 						{#each categories as cat}
 							<label class="category-option" class:selected={categoryId === cat.id}>
-								<input
-									type="radio"
-									name="category_id"
-									value={cat.id}
-									bind:group={categoryId}
-									hidden
-								/>
+								<input type="radio" name="category_id" value={cat.id} bind:group={categoryId} hidden />
 								<span class="cat-dot" style="background: {cat.color}"></span>
 								<span class="cat-name">{cat.name}</span>
 							</label>
 						{/each}
+						<button type="button" class="category-option" onclick={() => (showNewCat = true)} disabled={showNewCat}>
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+							</svg>
+							Nueva
+						</button>
 					</div>
+
+					{#if showNewCat}
+						<div class="new-category-form" style="display:flex;gap:0.5rem;margin-top:0.5rem;">
+							<input type="text" class="input" placeholder="Nombre" bind:value={newCatName} style="flex:1" />
+							<input type="color" bind:value={newCatColor} style="width:40px;height:40px;padding:0;border-radius:4px;" />
+							<button type="button" class="btn btn-primary" style="padding:0 0.75rem;" disabled={creatingCat} onclick={async () => {
+								if (!newCatName) return;
+								creatingCat = true;
+								const fd = new FormData();
+								fd.append('name', newCatName);
+								fd.append('color', newCatColor);
+								const res = await fetch('?/createCategory', { method: 'POST', body: fd });
+								const json = await res.json();
+								const data = JSON.parse(json.data);
+								if (data[1] === 'success') {
+									categories = [...categories, data[2].category];
+									categoryId = data[2].category.id;
+									showNewCat = false;
+									newCatName = '';
+								} else {
+									formError = 'Error creando categoría';
+								}
+								creatingCat = false;
+							}}>
+								{creatingCat ? '...' : 'OK'}
+							</button>
+							<button type="button" class="btn btn-ghost" style="padding:0 0.5rem;" onclick={() => (showNewCat = false)}>✕</button>
+						</div>
+					{/if}
+
 					<!-- Hidden fallback if no category selected -->
 					{#if !categoryId}
 						<input type="hidden" name="category_id" value="" />
@@ -218,14 +255,28 @@
 					></textarea>
 				</div>
 
-				<!-- Visibility (only directors can set 'school') -->
+				<!-- Visibility (only directors can set 'school' or 'group') -->
 				{#if userRole === 'director' || userRole === 'admin'}
-					<div class="form-group">
-						<label class="input-label" for="event-visibility">Visibilidad</label>
-						<select id="event-visibility" name="visibility" class="input" bind:value={visibility}>
-							<option value="private">Solo yo</option>
-							<option value="school">Toda la institución</option>
-						</select>
+					<div class="form-row">
+						<div class="form-group">
+							<label class="input-label" for="event-visibility">Visibilidad</label>
+							<select id="event-visibility" name="visibility" class="input" bind:value={visibility}>
+								<option value="private">Solo yo</option>
+								<option value="school">Toda la institución</option>
+								<option value="group">Grupo de Staff</option>
+							</select>
+						</div>
+						{#if visibility === 'group'}
+							<div class="form-group">
+								<label class="input-label" for="event-group">Seleccionar Grupo</label>
+								<select id="event-group" name="group_id" class="input" bind:value={groupId} required>
+									<option value="">Seleccionar...</option>
+									{#each groups ?? [] as g}
+										<option value={g.id}>{g.name}</option>
+									{/each}
+								</select>
+							</div>
+						{/if}
 					</div>
 				{:else}
 					<input type="hidden" name="visibility" value="private" />
