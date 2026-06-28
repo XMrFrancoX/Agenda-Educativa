@@ -1,5 +1,5 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
-import { RESEND_API_KEY, EMAIL_FROM } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	// Only allow authenticated requests
@@ -18,11 +18,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		const response = await fetch('https://api.resend.com/emails', {
 			method: 'POST',
 			headers: {
-				'Authorization': `Bearer ${RESEND_API_KEY}`,
+				'Authorization': `Bearer ${env.RESEND_API_KEY}`,
 				'Content-Type': 'application/json'
 			},
 			body: JSON.stringify({
-				from: EMAIL_FROM || 'Agenda Educativa <noreply@agenda-educativa.com>',
+				from: env.EMAIL_FROM || 'Agenda Educativa <noreply@agenda-educativa.com>',
 				to: Array.isArray(to) ? to : [to],
 				subject,
 				html: html ?? undefined,
