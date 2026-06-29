@@ -8,7 +8,7 @@ const adminClient = createClient(PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_
 	auth: { persistSession: false, autoRefreshToken: false }
 });
 
-const resend = new Resend(env.RESEND_API_KEY || '');
+const resend = new Resend(env.RESEND_API_KEY || 're_dummy_key_to_prevent_crash_during_build');
 // Initialize Twilio only if keys are present (to avoid crashing if they haven't configured it yet)
 const twilioClient = (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN) 
 	? twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN) 
@@ -64,7 +64,7 @@ export async function sendEventNotification({ title, message, schoolId, groupId,
 			const { data: userAuth } = await adminClient.auth.admin.getUserById(profile.id);
 			const email = userAuth?.user?.email;
 
-			if (email) {
+			if (email && env.RESEND_API_KEY) {
 				await resend.emails.send({
 					from: env.EMAIL_FROM || 'Agenda Educativa <onboarding@resend.dev>',
 					to: email,
