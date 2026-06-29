@@ -1,9 +1,16 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import type { ActionData, PageData } from './$types';
 
 	let { form, data }: { form: ActionData; data: PageData } = $props();
+
+	let urlError = $derived($page.url.searchParams.get('error'));
+	let displayError = $derived(
+		form?.error || 
+		(urlError === 'invalid_domain' ? 'Tu cuenta pertenece a otra institución. Verificá que estés en el link correcto.' : null)
+	);
 
 	let loading = $state(false);
 	let showPassword = $state(false);
@@ -51,12 +58,12 @@
 				<p>Ingresá con tu cuenta institucional</p>
 			</div>
 
-			{#if form?.error}
+			{#if displayError}
 				<div class="alert-error" role="alert">
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 						<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
 					</svg>
-					{form.error}
+					{displayError}
 				</div>
 			{/if}
 
