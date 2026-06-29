@@ -27,16 +27,39 @@
 
 	// Map DB events → FullCalendar event format
 	function mapToFCEvents(events: typeof data.events) {
-		return events.map((e) => ({
-			id: e.id,
-			title: e.title,
-			start: e.starts_at,
-			end: e.ends_at ?? undefined,
-			allDay: e.all_day,
-			backgroundColor: (e as any).event_categories?.color ?? '#6366f1',
-			borderColor: (e as any).event_categories?.color ?? '#6366f1',
-			extendedProps: { ...e }
-		}));
+		return events.map((e) => {
+			// Remover la información de zona horaria (Z o +00:00) para forzar a FullCalendar a tratarlo como Hora Local
+			let start = e.starts_at ? e.starts_at.replace(/(Z|[+-]\d{2}:\d{2})$/, '') : e.starts_at;
+			let end = e.ends_at ? e.ends_at.replace(/(Z|[+-]\d{2}:\d{2})$/, '') : e.ends_at;
+
+			if (e.all_day) {
+				start = start.split('T')[0];
+				if (end) {
+					end = end.split('T')[0];
+					// Si es el mismo día, lo omitimos para que FullCalendar asuma 1 día por defecto.
+					if (start === end) {
+						end = undefined;
+					} else {
+						// FullCalendar asume que el 'end' es EXCLUSIVO. 
+						// Si el usuario eligió que termina el 3 de julio, debemos pasar 4 de julio.
+						const d = new Date(end);
+						d.setUTCDate(d.getUTCDate() + 1);
+						end = d.toISOString().split('T')[0];
+					}
+				}
+			}
+
+			return {
+				id: e.id,
+				title: e.title,
+				start: start,
+				end: end,
+				allDay: e.all_day,
+				backgroundColor: (e as any).event_categories?.color ?? '#6366f1',
+				borderColor: (e as any).event_categories?.color ?? '#6366f1',
+				extendedProps: { ...e }
+			};
+		});
 	}
 
 	onMount(async () => {
@@ -67,6 +90,7 @@
 				day: 'Día',
 				list: 'Lista'
 			},
+			eventDisplay: 'list-item', // Fuerza a que TODOS los eventos (incluso allDay) se vean como puntito
 			events: mapToFCEvents(data.events),
 			selectable: true,
 			selectMirror: true,

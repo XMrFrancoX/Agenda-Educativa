@@ -308,7 +308,7 @@
 				</div>
 
 				<!-- Visibility (only directors can set 'school' or 'group') -->
-				{#if userRole === 'director' || userRole === 'admin'}
+				{#if userRole === 'director' || userRole === 'admin' || userRole === 'superadmin'}
 					<div class="form-row">
 						<div class="form-group">
 							<label class="input-label" for="event-visibility">Visibilidad</label>

@@ -1,5 +1,6 @@
 import type { PageServerLoad, Actions } from './$types';
 import { fail } from '@sveltejs/kit';
+import { sendEventNotification } from '$lib/server/notifications';
 
 export const load: PageServerLoad = async ({ locals: { supabase, profile } }) => {
 	// Load events — RLS handles visibility automatically based on role
@@ -57,7 +58,7 @@ export const actions: Actions = {
 		const description = formData.get('description') as string;
 		const starts_at = formData.get('starts_at') as string;
 		const ends_at = formData.get('ends_at') as string;
-		const all_day = formData.get('all_day') === 'true';
+		const all_day = formData.get('all_day') === 'on' || formData.get('all_day') === 'true';
 		const location = formData.get('location') as string;
 		const category_id = formData.get('category_id') as string;
 		const visibility = (formData.get('visibility') as string) || 'private';
@@ -89,6 +90,38 @@ export const actions: Actions = {
 		if (error) {
 			console.error('Create event error:', error);
 			return fail(500, { error: `No se pudo crear el evento: ${error.message} (Code: ${error.code})` });
+		}
+
+		// Disparar notificaciones en segundo plano si es para un grupo o toda la escuela
+		if ((visibility === 'group' || visibility === 'school') && profile?.school_id) {
+			let dateStr = starts_at.split('T')[0]; // simple date formatting
+			if (!all_day && starts_at.includes('T')) {
+				const timeStr = starts_at.split('T')[1].slice(0, 5);
+				dateStr += ` a las ${timeStr} hs`;
+				
+				if (ends_at && ends_at.includes('T')) {
+					const endTimeStr = ends_at.split('T')[1].slice(0, 5);
+					const endDateStr = ends_at.split('T')[0];
+					if (endDateStr === starts_at.split('T')[0]) {
+						dateStr += ` hasta las ${endTimeStr} hs`;
+					} else {
+						dateStr += ` hasta el ${endDateStr} a las ${endTimeStr} hs`;
+					}
+				}
+			} else if (all_day && ends_at) {
+				const endDateStr = ends_at.split('T')[0];
+				if (endDateStr !== starts_at.split('T')[0]) {
+					dateStr += ` hasta el ${endDateStr}`;
+				}
+			}
+			
+			await sendEventNotification({
+				title,
+				message: `${description ? description + '\n\n' : ''}Fecha programada: ${dateStr}`,
+				schoolId: profile.school_id,
+				groupId: group_id,
+				visibility: visibility as 'group' | 'school'
+			});
 		}
 
 		return { success: true, event };

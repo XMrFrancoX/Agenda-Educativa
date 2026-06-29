@@ -65,12 +65,35 @@
 				<div class="profile-avatar-lg" style="background: linear-gradient(135deg, #6366f1, #8b5cf6)">
 					{(data.profile?.full_name ?? 'U')[0].toUpperCase()}
 				</div>
-				<div>
+				<div style="flex: 1;">
 					<p class="profile-name-lg">{data.profile?.full_name ?? '—'}</p>
 					<p class="profile-email-lg">{data.user?.email}</p>
 					<span class="badge {roleClass[data.profile?.role ?? 'teacher']}" style="margin-top:.5rem;display:inline-block">
 						{roleLabel[data.profile?.role ?? 'teacher']}
 					</span>
+
+					<div style="margin-top: 1.5rem;">
+						<p class="settings-item-title" style="margin-bottom: 0.25rem;">Teléfono de Contacto (WhatsApp)</p>
+						<p class="settings-item-desc" style="margin-bottom: 0.75rem;">Para números de Argentina, incluir prefijo +549 (Ej: +5491112345678)</p>
+						<form method="POST" action="?/updatePhone" style="display:flex;gap:0.5rem;align-items:center;" use:enhance={() => {
+							saving = true;
+							return async ({ result, update }) => {
+								saving = false;
+								if (result.type === 'success') {
+									await invalidateAll();
+									saved = true;
+									setTimeout(() => (saved = false), 3000);
+								} else {
+									await update();
+								}
+							};
+						}}>
+							<input type="text" name="phone" class="input" placeholder="+54911..." value={data.profile?.phone || ''} style="max-width: 250px;" />
+							<button type="submit" class="btn btn-primary" disabled={saving}>
+								{saving ? 'Guardando...' : 'Guardar'}
+							</button>
+						</form>
+					</div>
 				</div>
 			</div>
 		</div>

@@ -135,6 +135,9 @@
 							{/if}
 						</button>
 					</div>
+					<div style="text-align: right; margin-top: 0.5rem;">
+						<a href="/recuperar-password" class="forgot-password-link">¿Olvidaste tu contraseña?</a>
+					</div>
 				</div>
 
 				<button type="submit" class="btn btn-primary btn-login" disabled={loading} id="btn-login">
@@ -251,9 +254,18 @@
 		color: var(--text-primary);
 	}
 	.login-card-header p {
-		font-size: 0.875rem;
 		color: var(--text-muted);
-		margin-top: 0.25rem;
+		font-size: 0.9375rem;
+	}
+
+	.forgot-password-link {
+		font-size: 0.8125rem;
+		color: var(--color-primary);
+		text-decoration: none;
+		font-weight: 500;
+	}
+	.forgot-password-link:hover {
+		text-decoration: underline;
 	}
 
 	.alert-error {

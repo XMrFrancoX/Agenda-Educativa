@@ -41,5 +41,27 @@ export const actions = {
 			return { success: false, error: 'No se pudo crear la categoría.' };
 		}
 		return { success: true };
+	},
+	updatePhone: async ({ request, locals: { supabase, user } }) => {
+		if (!user) return { success: false, error: 'No autorizado' };
+		const formData = await request.formData();
+		let phone = formData.get('phone') as string;
+		
+		// Clean phone input (only digits and +)
+		if (phone) {
+			phone = phone.replace(/[^\d+]/g, '');
+		}
+		
+		const { error } = await supabase
+			.from('profiles')
+			.update({ phone: phone || null })
+			.eq('id', user.id);
+			
+		if (error) {
+			console.error('Update phone error:', error);
+			return { success: false, error: 'No se pudo actualizar el teléfono.' };
+		}
+		
+		return { success: true };
 	}
 };

@@ -2,7 +2,7 @@ import { createSupabaseServerClient } from '$lib/supabase';
 import { type Handle, redirect } from '@sveltejs/kit';
 
 // Routes that don't require authentication
-const PUBLIC_ROUTES = ['/login', '/auth/callback'];
+const PUBLIC_ROUTES = ['/login', '/auth/callback', '/recuperar-password', '/update-password'];
 
 export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.supabase = createSupabaseServerClient(
@@ -105,8 +105,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 		throw redirect(303, '/suspendida');
 	}
 
-	// Redirect authenticated users away from login
-	if (user && event.url.pathname === '/login') {
+	// Redirect authenticated users away from login and root
+	if (user && (event.url.pathname === '/login' || event.url.pathname === '/')) {
 		throw redirect(303, '/calendario');
 	}
 
