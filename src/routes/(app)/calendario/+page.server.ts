@@ -28,6 +28,12 @@ export const load: PageServerLoad = async ({ locals: { supabase, profile } }) =>
 		.select('id, name, color, icon')
 		.order('name');
 
+	const { data: groups } = await supabase
+		.from('staff_groups')
+		.select('id, name')
+		.eq('school_id', profile?.school_id)
+		.order('name');
+
 	return {
 		events: events ?? [],
 		preferences: preferences ?? {
@@ -38,6 +44,7 @@ export const load: PageServerLoad = async ({ locals: { supabase, profile } }) =>
 			notify_1h: true
 		},
 		categories: categories ?? [],
+		groups: groups ?? [],
 		profile
 	};
 };
@@ -55,6 +62,8 @@ export const actions: Actions = {
 		const category_id = formData.get('category_id') as string;
 		const visibility = (formData.get('visibility') as string) || 'private';
 
+		const group_id = formData.get('group_id') as string;
+
 		if (!title || !starts_at) {
 			return fail(400, { error: 'El título y la fecha de inicio son requeridos.' });
 		}
@@ -70,6 +79,7 @@ export const actions: Actions = {
 				location: location || null,
 				category_id: category_id || null,
 				visibility,
+				group_id: visibility === 'group' && group_id ? group_id : null,
 				school_id: profile?.school_id,
 				created_by: profile?.id
 			})
@@ -78,7 +88,7 @@ export const actions: Actions = {
 
 		if (error) {
 			console.error('Create event error:', error);
-			return fail(500, { error: 'No se pudo crear el evento.' });
+			return fail(500, { error: `No se pudo crear el evento: ${error.message} (Code: ${error.code})` });
 		}
 
 		return { success: true, event };
@@ -149,5 +159,25 @@ export const actions: Actions = {
 			});
 
 		return { success: true };
+	},
+
+	createCategory: async ({ request, locals: { supabase, profile } }) => {
+		const formData = await request.formData();
+		const name = formData.get('name') as string;
+		const color = formData.get('color') as string;
+
+		if (!name || !color) return fail(400, { error: 'Nombre y color son requeridos.' });
+
+		const { data, error } = await supabase
+			.from('event_categories')
+			.insert({ name, color })
+			.select()
+			.single();
+
+		if (error) {
+			console.error('Create category error:', error);
+			return fail(500, { error: 'No se pudo crear la categoría.' });
+		}
+		return { success: true, category: data };
 	}
 };

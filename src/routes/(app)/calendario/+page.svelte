@@ -9,13 +9,18 @@
 	let { data }: { data: PageData } = $props();
 
 	let calendarEl: HTMLDivElement;
-	let calendarInstance: any = null;
+	let calendarInstance = $state<any>(null);
 	let showEventDialog = $state(false);
 	let showDetailModal = $state(false);
 	let selectedEvent = $state<Record<string, any> | null>(null);
 	let editingEvent = $state<Record<string, any> | null>(null);
+	let selectedDateRange = $state<{start: string, end: string, allDay: boolean} | null>(null);
 	let showTeacher = $state(data.preferences?.show_teacher_events ?? false);
 	let togglingTeacher = $state(false);
+
+	$effect(() => {
+		console.log('Events from DB:', data.events);
+	});
 
 	const isDirector = $derived(data.profile?.role === 'director' || data.profile?.role === 'admin');
 
@@ -52,12 +57,13 @@
 			headerToolbar: {
 				left: 'prev,next today',
 				center: 'title',
-				right: 'dayGridMonth,timeGridWeek,listMonth'
+				right: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth'
 			},
 			buttonText: {
 				today: 'Hoy',
 				month: 'Mes',
 				week: 'Semana',
+				day: 'Día',
 				list: 'Lista'
 			},
 			events: mapToFCEvents(data.events),
@@ -71,8 +77,12 @@
 			select: (info: any) => {
 				// Open create dialog pre-filled with selected date
 				editingEvent = null;
+				selectedDateRange = {
+					start: info.startStr,
+					end: info.endStr,
+					allDay: info.allDay
+				};
 				showEventDialog = true;
-				// pre-fill date (handled in EventDialog via prop in next version)
 			},
 			noEventsContent: 'No hay eventos este período'
 		});
@@ -83,9 +93,10 @@
 
 	// Reactively update calendar when events change
 	$effect(() => {
+		const events = data.events;
 		if (calendarInstance) {
 			calendarInstance.removeAllEvents();
-			calendarInstance.addEventSource(mapToFCEvents(data.events));
+			calendarInstance.addEventSource(mapToFCEvents(events));
 		}
 	});
 
@@ -188,9 +199,11 @@
 	bind:open={showEventDialog}
 	event={editingEvent}
 	categories={data.categories}
+	groups={data.groups}
 	userRole={data.profile?.role ?? 'teacher'}
 	schoolId={data.profile?.school_id ?? ''}
-	onclose={() => { editingEvent = null; }}
+	initialDateRange={selectedDateRange}
+	onclose={() => { editingEvent = null; selectedDateRange = null; }}
 />
 
 <EventDetailModal

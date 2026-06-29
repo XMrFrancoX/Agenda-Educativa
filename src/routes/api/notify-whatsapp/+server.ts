@@ -1,5 +1,5 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
-import { TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_FROM } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 
 /**
  * Send a WhatsApp message via Twilio REST API (no SDK needed — pure fetch).
@@ -17,9 +17,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!to) return json({ error: 'El número de destino es requerido (formato E.164: +5491112345678)' }, { status: 400 });
 
 	// Twilio credentials
-	const accountSid = TWILIO_ACCOUNT_SID;
-	const authToken  = TWILIO_AUTH_TOKEN;
-	const from       = TWILIO_WHATSAPP_FROM; // e.g. "whatsapp:+14155238886"
+	const accountSid = env.TWILIO_ACCOUNT_SID;
+	const authToken  = env.TWILIO_AUTH_TOKEN;
+	const from       = env.TWILIO_WHATSAPP_FROM; // e.g. "whatsapp:+14155238886"
 
 	// Build form-encoded body for Twilio REST API
 	const params = new URLSearchParams();

@@ -4,6 +4,7 @@
 	let { children, data } = $props();
 </script>
 
+
 <div class="app-layout">
 	<Sidebar profile={data.profile} />
 	<main class="main-content">

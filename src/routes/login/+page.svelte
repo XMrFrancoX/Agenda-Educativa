@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
-	import type { ActionData } from './$types';
+	import type { ActionData, PageData } from './$types';
 
-	let { form }: { form: ActionData } = $props();
+	let { form, data }: { form: ActionData; data: PageData } = $props();
 
 	let loading = $state(false);
 	let showPassword = $state(false);
@@ -28,15 +28,19 @@
 		<!-- Logo & Branding -->
 		<div class="login-brand">
 			<div class="brand-icon">
-				<svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-					<rect width="32" height="32" rx="10" fill="#6366f1"/>
-					<path d="M8 12h16M8 16h10M8 20h13" stroke="white" stroke-width="2" stroke-linecap="round"/>
-					<circle cx="24" cy="10" r="4" fill="#8b5cf6"/>
-				</svg>
+				{#if data.tenant?.logo_url}
+					<img src={data.tenant.logo_url} alt="Logo Institucional" style="width: 32px; height: 32px; border-radius: 6px; object-fit: contain;" />
+				{:else}
+					<svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+						<rect width="32" height="32" rx="10" fill="var(--color-primary, #6366f1)"/>
+						<path d="M8 12h16M8 16h10M8 20h13" stroke="white" stroke-width="2" stroke-linecap="round"/>
+						<circle cx="24" cy="10" r="4" fill="var(--text-secondary, #8b5cf6)"/>
+					</svg>
+				{/if}
 			</div>
 			<div>
-				<h1 class="brand-name">Agenda Educativa</h1>
-				<p class="brand-tagline">NMF Soluciones Educativas</p>
+				<h1 class="brand-name">{data.tenant?.name || 'Agenda Educativa'}</h1>
+				<p class="brand-tagline">{data.tenant ? 'Plataforma Institucional' : 'NMF Soluciones Educativas'}</p>
 			</div>
 		</div>
 

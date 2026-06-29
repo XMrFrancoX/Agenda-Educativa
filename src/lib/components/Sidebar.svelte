@@ -7,23 +7,28 @@
 		profile: {
 			id: string;
 			full_name: string | null;
-			role: 'teacher' | 'director' | 'admin';
+			role: 'teacher' | 'director' | 'admin' | 'student' | 'tutor';
 			school_id: string;
 			phone: string | null;
 			avatar_url: string | null;
+			school_logo_url?: string | null;
 		} | null;
 	}>();
 
 	const roleLabel: Record<string, string> = {
 		teacher: 'Docente',
 		director: 'Director/a',
-		admin: 'Administrador'
+		admin: 'Administrador',
+		student: 'Alumno/a',
+		tutor: 'Tutor/a'
 	};
 
 	const roleClass: Record<string, string> = {
 		teacher: 'role-teacher',
 		director: 'role-director',
-		admin: 'role-admin'
+		admin: 'role-admin',
+		student: 'role-student',
+		tutor: 'role-tutor'
 	};
 
 	function getInitials(name: string | null) {
@@ -39,7 +44,9 @@
 	function avatarColor(role: string) {
 		if (role === 'director') return 'linear-gradient(135deg, #8b5cf6, #6366f1)';
 		if (role === 'teacher') return 'linear-gradient(135deg, #06b6d4, #0284c7)';
-		return 'linear-gradient(135deg, #f59e0b, #d97706)';
+		if (role === 'admin') return 'linear-gradient(135deg, #f59e0b, #d97706)';
+		if (role === 'student') return 'linear-gradient(135deg, #10b981, #059669)';
+		return 'linear-gradient(135deg, #ec4899, #be185d)';
 	}
 
 	const navItems = [
@@ -47,13 +54,13 @@
 			href: '/calendario',
 			label: 'Calendario',
 			icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
-			roles: ['teacher', 'director', 'admin']
+			roles: ['student', 'tutor', 'teacher', 'director', 'admin']
 		},
 		{
 			href: '/tareas',
 			label: 'Mis Tareas',
 			icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`,
-			roles: ['teacher', 'director', 'admin']
+			roles: ['student', 'tutor', 'teacher', 'director', 'admin']
 		},
 		{
 			href: '/staff',
@@ -65,13 +72,19 @@
 			href: '/reuniones',
 			label: 'Reuniones',
 			icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
-			roles: ['teacher', 'director', 'admin']
+			roles: ['student', 'tutor', 'teacher', 'director', 'admin']
 		},
 		{
 			href: '/configuracion',
 			label: 'Configuración',
 			icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
 			roles: ['director', 'admin']
+		},
+		{
+			href: '/admin',
+			label: 'Panel Admin',
+			icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+			roles: ['admin']
 		}
 	];
 
@@ -84,11 +97,15 @@
 	<!-- Brand -->
 	<div class="sidebar-brand">
 		<div class="brand-logo">
-			<svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-				<rect width="32" height="32" rx="9" fill="#6366f1"/>
-				<path d="M8 12h16M8 16h10M8 20h13" stroke="white" stroke-width="2" stroke-linecap="round"/>
-				<circle cx="24" cy="10" r="4" fill="#8b5cf6"/>
-			</svg>
+			{#if profile && profile.school_logo_url}
+				<img src={profile.school_logo_url} alt="Logo" class="custom-school-logo" />
+			{:else}
+				<svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+					<rect width="32" height="32" rx="9" fill="#6366f1"/>
+					<path d="M8 12h16M8 16h10M8 20h13" stroke="white" stroke-width="2" stroke-linecap="round"/>
+					<circle cx="24" cy="10" r="4" fill="#8b5cf6"/>
+				</svg>
+			{/if}
 		</div>
 		<div class="brand-text">
 			<span class="brand-name">Agenda</span>
@@ -179,6 +196,12 @@
 		flex-shrink: 0;
 		filter: drop-shadow(0 0 8px rgba(99,102,241,0.4));
 	}
+	.custom-school-logo {
+		width: 28px;
+		height: 28px;
+		object-fit: contain;
+		border-radius: 6px;
+	}
 	.brand-text {
 		display: flex;
 		flex-direction: column;
@@ -207,7 +230,7 @@
 	.sidebar-nav {
 		display: flex;
 		flex-direction: column;
-		gap: 0.25rem;
+		gap: 0.5rem;
 	}
 	.nav-item {
 		position: relative;
@@ -229,8 +252,8 @@
 		color: var(--text-primary);
 	}
 	.nav-item.active {
-		background: rgba(99, 102, 241, 0.12);
-		color: #a5b4fc;
+		background: var(--color-primary-alpha-12, rgba(99, 102, 241, 0.12));
+		color: var(--color-primary-light, #a5b4fc);
 	}
 	.nav-icon {
 		flex-shrink: 0;

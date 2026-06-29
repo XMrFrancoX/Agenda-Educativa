@@ -8,6 +8,24 @@
 	let prefs = $state({ ...(data.preferences ?? {}) });
 	let saving = $state(false);
 	let saved = $state(false);
+	let newCatName = $state('');
+	let newCatColor = $state('#6366f1');
+
+	const roleLabel: Record<string, string> = {
+		teacher: 'Docente',
+		director: 'Director/a',
+		admin: 'Administrador',
+		student: 'Alumno/a',
+		tutor: 'Tutor/a'
+	};
+
+	const roleClass: Record<string, string> = {
+		teacher: 'role-teacher',
+		director: 'role-director',
+		admin: 'role-admin',
+		student: 'role-student',
+		tutor: 'role-tutor'
+	};
 
 	async function savePreferences() {
 		saving = true;
@@ -50,8 +68,8 @@
 				<div>
 					<p class="profile-name-lg">{data.profile?.full_name ?? '—'}</p>
 					<p class="profile-email-lg">{data.user?.email}</p>
-					<span class="badge {data.profile?.role === 'director' ? 'role-director' : 'role-teacher'}" style="margin-top:.5rem;display:inline-block">
-						{data.profile?.role === 'director' ? 'Director/a' : 'Docente'}
+					<span class="badge {roleClass[data.profile?.role ?? 'teacher']}" style="margin-top:.5rem;display:inline-block">
+						{roleLabel[data.profile?.role ?? 'teacher']}
 					</span>
 				</div>
 			</div>
@@ -127,6 +145,63 @@
 			{#if saved}
 				<p class="save-feedback">✓ Preferencias guardadas</p>
 			{/if}
+		</div>
+
+		<!-- Gestión de Categorías -->
+		<div class="card settings-card">
+			<h3 class="settings-section-title">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+					<polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>
+				</svg>
+				Gestión de Categorías
+			</h3>
+
+			<!-- Add new -->
+			<form method="POST" action="?/createCategory" use:enhance={() => {
+				return async ({ result, update }) => {
+					if (result.type === 'success') {
+						newCatName = '';
+						await invalidateAll();
+					} else {
+						await update();
+					}
+				};
+			}}>
+				<div style="display:flex; gap:0.5rem; margin-bottom: 1rem; align-items:center;">
+					<input type="text" name="name" class="input" placeholder="Nueva categoría..." bind:value={newCatName} required style="flex:1" />
+					<input type="color" name="color" bind:value={newCatColor} style="width:40px;height:40px;padding:0;border-radius:4px;cursor:pointer" />
+					<button type="submit" class="btn btn-primary" style="padding:0 1rem;">Agregar</button>
+				</div>
+			</form>
+
+			<div class="divider"></div>
+
+			<!-- List -->
+			<div style="display:flex;flex-direction:column;gap:0.5rem;">
+				{#each data.categories as cat}
+					<div class="settings-item" style="padding:0.25rem 0;">
+						<div style="display:flex;align-items:center;gap:0.5rem;">
+							<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:{cat.color}"></span>
+							<span class="settings-item-title">{cat.name}</span>
+						</div>
+						<form method="POST" action="?/deleteCategory" use:enhance={() => {
+							return async ({ result }) => {
+								if (result.type === 'success') await invalidateAll();
+							};
+						}}>
+							<input type="hidden" name="id" value={cat.id} />
+							<button type="submit" class="btn btn-ghost" style="padding:0.2rem;color:var(--color-danger)" aria-label="Eliminar">
+								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+								</svg>
+							</button>
+						</form>
+					</div>
+				{:else}
+					<p class="settings-item-desc">No hay categorías configuradas.</p>
+				{/each}
+			</div>
 		</div>
 	</div>
 </div>

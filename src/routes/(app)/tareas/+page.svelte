@@ -13,10 +13,12 @@
 	let creating = $state(false);
 	let formError = $state('');
 
+	import { Clock, RefreshCw, CheckCircle2 } from 'lucide-svelte';
+
 	const columns = [
-		{ key: 'pending',     label: 'Pendiente',    color: '#6366f1', icon: '⏳' },
-		{ key: 'in_progress', label: 'En Progreso',  color: '#f59e0b', icon: '🔄' },
-		{ key: 'done',        label: 'Completado',   color: '#10b981', icon: '✅' }
+		{ key: 'pending',     label: 'Pendiente',    color: '#6366f1', icon: Clock },
+		{ key: 'in_progress', label: 'En Progreso',  color: '#f59e0b', icon: RefreshCw },
+		{ key: 'done',        label: 'Completado',   color: '#10b981', icon: CheckCircle2 }
 	] as const;
 
 	type Status = 'pending' | 'in_progress' | 'done';
@@ -99,8 +101,9 @@
 			<div class="kanban-column">
 				<!-- Column header -->
 				<div class="kanban-column-header" style="border-top: 3px solid {col.color}">
-					<span class="kanban-column-title" style="color: {col.color}">
-						{col.icon} {col.label}
+					<span class="kanban-column-title" style="color: {col.color}; display: flex; align-items: center; gap: 0.35rem;">
+						<svelte:component this={col.icon} size="16" />
+						{col.label}
 					</span>
 					<span class="kanban-column-count">{tasksByStatus(col.key).length}</span>
 				</div>
