@@ -1,17 +1,17 @@
-import { RESEND_API_KEY, EMAIL_FROM, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_FROM, SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 import { PUBLIC_SUPABASE_URL } from '$env/static/public';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import twilio from 'twilio';
 
-const adminClient = createClient(PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+const adminClient = createClient(PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY || '', {
 	auth: { persistSession: false, autoRefreshToken: false }
 });
 
-const resend = new Resend(RESEND_API_KEY);
+const resend = new Resend(env.RESEND_API_KEY || '');
 // Initialize Twilio only if keys are present (to avoid crashing if they haven't configured it yet)
-const twilioClient = (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) 
-	? twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN) 
+const twilioClient = (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN) 
+	? twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN) 
 	: null;
 
 interface NotificationParams {
@@ -66,7 +66,7 @@ export async function sendEventNotification({ title, message, schoolId, groupId,
 
 			if (email) {
 				await resend.emails.send({
-					from: EMAIL_FROM || 'Agenda Educativa <onboarding@resend.dev>',
+					from: env.EMAIL_FROM || 'Agenda Educativa <onboarding@resend.dev>',
 					to: email,
 					replyTo: 'nmfsoluciones@gmail.com',
 					subject: `Nuevo Evento: ${title}`,
@@ -84,7 +84,7 @@ export async function sendEventNotification({ title, message, schoolId, groupId,
 				}).catch(err => console.error('Error enviando email a', email, err));
 			}
 
-			if (profile.phone && twilioClient && TWILIO_WHATSAPP_FROM) {
+			if (profile.phone && twilioClient && env.TWILIO_WHATSAPP_FROM) {
 				// Formatear el teléfono para Argentina (Twilio requiere +549 seguido de la característica y número sin el 15)
 				let phoneStr = profile.phone.replace(/\D/g, ''); // Limpiar cualquier espacio o guión
 				
@@ -100,7 +100,7 @@ export async function sendEventNotification({ title, message, schoolId, groupId,
 				
 				await twilioClient.messages.create({
 					body: `*Agenda Educativa*\n\nHola ${profile.full_name || ''}, hay un nuevo evento programado:\n\n*${title}*\n${message}\n\nRevisa la plataforma para más detalles.`,
-					from: TWILIO_WHATSAPP_FROM,
+					from: env.TWILIO_WHATSAPP_FROM,
 					to: `whatsapp:${phone}`
 				}).catch(err => console.error('Error enviando WhatsApp a', phone, err));
 			}

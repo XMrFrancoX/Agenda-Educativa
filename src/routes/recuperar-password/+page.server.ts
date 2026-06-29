@@ -2,7 +2,7 @@ import type { Actions } from './$types';
 import { fail } from '@sveltejs/kit';
 import { createClient } from '@supabase/supabase-js';
 import { PUBLIC_SUPABASE_URL } from '$env/static/public';
-import { SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY, EMAIL_FROM } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 import { Resend } from 'resend';
 
 export const actions: Actions = {
@@ -14,7 +14,7 @@ export const actions: Actions = {
 
 		try {
 			// Usamos Service Role para saltar las validaciones estrictas de dominios de Supabase Auth
-			const adminAuthClient = createClient(PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+			const adminAuthClient = createClient(PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY || '', {
 				auth: {
 					autoRefreshToken: false,
 					persistSession: false,
@@ -37,10 +37,10 @@ export const actions: Actions = {
 			}
 
 			const actionLink = data.properties.action_link;
-			const resend = new Resend(RESEND_API_KEY);
+			const resend = new Resend(env.RESEND_API_KEY || '');
 			
 			const { error: resendError } = await resend.emails.send({
-				from: EMAIL_FROM || 'Agenda Educativa <onboarding@resend.dev>',
+				from: env.EMAIL_FROM || 'Agenda Educativa <onboarding@resend.dev>',
 				to: email,
 				replyTo: 'nmfsoluciones@gmail.com',
 				subject: 'Recuperación de Contraseña - Agenda Educativa',
