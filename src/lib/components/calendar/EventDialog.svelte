@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 
@@ -8,6 +9,7 @@
 		categories = [],
 		userRole = 'teacher',
 		schoolId = '',
+		initialDateRange = null,
 		onclose
 	}: {
 		open: boolean;
@@ -16,6 +18,7 @@
 		groups?: Array<{ id: string; name: string }>;
 		userRole: string;
 		schoolId: string;
+		initialDateRange?: { start: string; end: string; allDay: boolean } | null;
 		onclose?: () => void;
 	} = $props();
 
@@ -41,29 +44,78 @@
 	let newCatColor = $state('#6366f1');
 	let creatingCat = $state(false);
 
-	// Populate form when editing
+	function formatDatetimeLocal(dateStr: string, defaultTime: string) {
+		if (!dateStr) return '';
+		if (dateStr.length === 10) return `${dateStr}T${defaultTime}`;
+		return dateStr.slice(0, 16);
+	}
+
+	let prevOpen = $state(false);
+
+	// Populate form when editing or opening
 	$effect(() => {
-		if (event) {
-			title = event.title ?? '';
-			description = event.description ?? '';
-			startsAt = event.starts_at ? event.starts_at.slice(0, 16) : '';
-			endsAt = event.ends_at ? event.ends_at.slice(0, 16) : '';
-			allDay = event.all_day ?? false;
-			location = event.location ?? '';
-			categoryId = event.category_id ?? '';
-			visibility = event.visibility ?? 'private';
-		} else {
-			title = '';
-			description = '';
-			startsAt = '';
-			endsAt = '';
-			allDay = false;
-			location = '';
-			categoryId = '';
-			visibility = 'private';
+		if (open && !prevOpen) {
+			untrack(() => {
+				if (event) {
+					title = event.title ?? '';
+					description = event.description ?? '';
+					allDay = event.all_day ?? false;
+					startsAt = event.starts_at ? (allDay ? event.starts_at.slice(0, 10) : event.starts_at.slice(0, 16)) : '';
+					endsAt = event.ends_at ? (allDay ? event.ends_at.slice(0, 10) : event.ends_at.slice(0, 16)) : '';
+					location = event.location ?? '';
+					categoryId = event.category_id ?? '';
+					visibility = event.visibility ?? 'private';
+				} else {
+					title = '';
+					description = '';
+					allDay = initialDateRange?.allDay ?? false;
+					
+					if (allDay) {
+						startsAt = initialDateRange?.start ? initialDateRange.start.slice(0, 10) : '';
+						if (initialDateRange?.end && initialDateRange.end.length === 10) {
+							const startD = new Date(initialDateRange.start);
+							const endD = new Date(initialDateRange.end);
+							if (endD.getTime() - startD.getTime() === 86400000) {
+								endsAt = initialDateRange.start.slice(0, 10);
+							} else {
+								endD.setDate(endD.getDate() - 1);
+								endsAt = endD.toISOString().slice(0, 10);
+							}
+						} else {
+							endsAt = initialDateRange?.end ? initialDateRange.end.slice(0, 10) : '';
+						}
+					} else {
+						startsAt = initialDateRange?.start ? formatDatetimeLocal(initialDateRange.start, '08:00') : '';
+						if (initialDateRange?.end) {
+							if (initialDateRange.end.length === 10) {
+								endsAt = formatDatetimeLocal(initialDateRange.start, '09:00');
+							} else {
+								endsAt = formatDatetimeLocal(initialDateRange.end, '09:00');
+							}
+						} else {
+							endsAt = '';
+						}
+					}
+
+					location = '';
+					categoryId = '';
+					visibility = 'private';
+				}
+				formError = '';
+			});
 		}
-		formError = '';
+		prevOpen = open;
 	});
+
+	function handleAllDayToggle() {
+		if (allDay) {
+			if (startsAt.length > 10) startsAt = startsAt.slice(0, 10);
+			if (endsAt.length > 10) endsAt = endsAt.slice(0, 10);
+		} else {
+			if (startsAt && startsAt.length === 10) startsAt = `${startsAt}T08:00`;
+			if (endsAt && endsAt.length === 10) endsAt = `${endsAt}T09:00`;
+		}
+	}
 
 	function close() {
 		open = false;
@@ -221,7 +273,7 @@
 				<div class="form-group">
 					<label class="toggle-wrapper">
 						<div class="toggle">
-							<input type="checkbox" name="all_day" bind:checked={allDay} value="true" />
+							<input type="checkbox" name="all_day" bind:checked={allDay} onchange={handleAllDayToggle} />
 							<div class="toggle-track"></div>
 							<div class="toggle-thumb"></div>
 						</div>
