@@ -2,7 +2,7 @@ import type { PageServerLoad, Actions } from './$types';
 import { fail, redirect } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ locals: { supabase, profile } }) => {
-	if (profile?.role !== 'director' && profile?.role !== 'admin') {
+	if (profile?.role !== 'director' && profile?.role !== 'admin' && profile?.role !== 'superadmin') {
 		throw redirect(303, '/calendario');
 	}
 

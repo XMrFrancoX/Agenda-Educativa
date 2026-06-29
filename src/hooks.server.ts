@@ -82,7 +82,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// Cross-domain security check
 	if (event.locals.user && tenant && event.locals.profile) {
 		// Si el usuario tiene una escuela distinta al tenant del dominio, y no es admin global
-		if (event.locals.profile.school_id !== tenant.id && event.locals.profile.role !== 'admin') {
+		if (event.locals.profile.school_id !== tenant.id && event.locals.profile.role !== 'superadmin') {
 			await event.locals.supabase.auth.signOut();
 			throw redirect(303, '/login?error=invalid_domain');
 		}
@@ -98,7 +98,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	if (
 		user && 
 		event.locals.profile?.school_status === 'suspended' && 
-		event.locals.profile?.role !== 'admin' && 
+		event.locals.profile?.role !== 'superadmin' && 
 		event.url.pathname !== '/suspendida' &&
 		event.url.pathname !== '/logout'
 	) {

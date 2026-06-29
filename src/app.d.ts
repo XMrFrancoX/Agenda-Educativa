@@ -12,7 +12,7 @@ declare global {
 			profile: {
 				id: string;
 				full_name: string | null;
-				role: 'teacher' | 'director' | 'admin' | 'student' | 'tutor';
+				role: 'teacher' | 'director' | 'admin' | 'superadmin' | 'student' | 'tutor';
 				school_id: string;
 				phone: string | null;
 				avatar_url: string | null;

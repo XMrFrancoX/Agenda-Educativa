@@ -17,12 +17,13 @@
 	let selectedDateRange = $state<{start: string, end: string, allDay: boolean} | null>(null);
 	let showTeacher = $state(data.preferences?.show_teacher_events ?? false);
 	let togglingTeacher = $state(false);
+	let currentView = $state('timeGridWeek');
 
 	$effect(() => {
 		console.log('Events from DB:', data.events);
 	});
 
-	const isDirector = $derived(data.profile?.role === 'director' || data.profile?.role === 'admin');
+	const isDirector = $derived(data.profile?.role === 'director' || data.profile?.role === 'admin' || data.profile?.role === 'superadmin');
 
 	// Map DB events → FullCalendar event format
 	function mapToFCEvents(events: typeof data.events) {
