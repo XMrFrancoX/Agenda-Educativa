@@ -1,5 +1,6 @@
 import type { PageServerLoad, Actions } from './$types';
 import { fail, redirect } from '@sveltejs/kit';
+import { createSupabaseAdminClient } from '$lib/supabase';
 
 export const load: PageServerLoad = async ({ locals: { supabase, profile } }) => {
 	// Verificar que el usuario tenga rol 'superadmin'
@@ -100,21 +101,29 @@ export const actions: Actions = {
 			return fail(400, { error: 'Formato de imagen no soportado.' });
 		}
 
+		// Convertir File a ArrayBuffer para poder subirlo
+		const arrayBuffer = await file.arrayBuffer();
+		const fileBuffer = new Uint8Array(arrayBuffer);
+		const contentType = file.type || 'image/png';
 		const fileName = `${schoolId}-${Date.now()}.${ext}`;
 
-		const { data: uploadData, error: uploadError } = await supabase.storage
+		// Usamos el cliente admin (service_role) para saltar el RLS de Storage
+		const adminClient = createSupabaseAdminClient();
+
+		const { error: uploadError } = await adminClient.storage
 			.from('school_logos')
-			.upload(fileName, file, {
+			.upload(fileName, fileBuffer, {
+				contentType,
 				cacheControl: '3600',
-				upsert: false
+				upsert: true
 			});
 
 		if (uploadError) {
 			console.error('Error subiendo logo:', uploadError);
-			return fail(500, { error: 'No se pudo subir la imagen.' });
+			return fail(500, { error: `No se pudo subir la imagen: ${uploadError.message}` });
 		}
 
-		const { data: publicUrlData } = supabase.storage
+		const { data: publicUrlData } = adminClient.storage
 			.from('school_logos')
 			.getPublicUrl(fileName);
 
