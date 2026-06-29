@@ -7,6 +7,7 @@
 		open = $bindable(false),
 		event = null,
 		categories = [],
+		groups = [],
 		userRole = 'teacher',
 		schoolId = '',
 		initialDateRange = null,
@@ -315,7 +316,9 @@
 							<select id="event-visibility" name="visibility" class="input" bind:value={visibility}>
 								<option value="private">Solo yo</option>
 								<option value="school">Toda la institución</option>
-								<option value="group">Grupo de Staff</option>
+								{#if groups && groups.length > 0}
+									<option value="group">Grupo de Staff</option>
+								{/if}
 							</select>
 						</div>
 						{#if visibility === 'group'}
@@ -323,13 +326,19 @@
 								<label class="input-label" for="event-group">Seleccionar Grupo</label>
 								<select id="event-group" name="group_id" class="input" bind:value={groupId} required>
 									<option value="">Seleccionar...</option>
-									{#each groups ?? [] as g}
+									{#each groups as g}
 										<option value={g.id}>{g.name}</option>
 									{/each}
 								</select>
 							</div>
 						{/if}
 					</div>
+					{#if (!groups || groups.length === 0) && (userRole === 'director' || userRole === 'admin' || userRole === 'superadmin')}
+						<p class="hint-text">
+							💡 Para usar visibilidad por grupo, primero creá grupos en la sección
+							<a href="/staff" class="link-inline">Staff</a>.
+						</p>
+					{/if}
 				{:else}
 					<input type="hidden" name="visibility" value="private" />
 				{/if}
@@ -433,5 +442,17 @@
 		margin-top: 1.5rem;
 		padding-top: 1rem;
 		border-top: 1px solid var(--border-subtle);
+	}
+
+	.hint-text {
+		font-size: 0.8rem;
+		color: var(--text-muted);
+		margin-top: 0.35rem;
+		margin-bottom: 0;
+	}
+	.link-inline {
+		color: var(--color-primary);
+		text-decoration: underline;
+		text-underline-offset: 2px;
 	}
 </style>
