@@ -2,17 +2,49 @@ import { env } from '$env/dynamic/private';
 import { PUBLIC_SUPABASE_URL } from '$env/static/public';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
-import twilio from 'twilio';
 
 const adminClient = createClient(PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY || '', {
 	auth: { persistSession: false, autoRefreshToken: false }
 });
 
 const resend = new Resend(env.RESEND_API_KEY || 're_dummy_key_to_prevent_crash_during_build');
-// Initialize Twilio only if keys are present (to avoid crashing if they haven't configured it yet)
-const twilioClient = (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN) 
-	? twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN) 
-	: null;
+
+/**
+ * Envía un WhatsApp usando la API REST de Twilio con fetch nativo.
+ * Compatible con Cloudflare Workers (no usa el paquete twilio que requiere Node.js).
+ */
+async function sendWhatsApp(to: string, body: string) {
+	const accountSid = env.TWILIO_ACCOUNT_SID;
+	const authToken = env.TWILIO_AUTH_TOKEN;
+	const from = env.TWILIO_WHATSAPP_FROM;
+
+	if (!accountSid || !authToken || !from) return;
+
+	const credentials = btoa(`${accountSid}:${authToken}`);
+	const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+
+	const formData = new URLSearchParams();
+	formData.append('From', from);
+	formData.append('To', `whatsapp:${to}`);
+	formData.append('Body', body);
+
+	const response = await fetch(url, {
+		method: 'POST',
+		headers: {
+			'Authorization': `Basic ${credentials}`,
+			'Content-Type': 'application/x-www-form-urlencoded'
+		},
+		body: formData.toString()
+	});
+
+	if (!response.ok) {
+		const errText = await response.text();
+		console.error('Twilio API error:', response.status, errText);
+	} else {
+		const data = await response.json() as { sid: string };
+		console.log('WhatsApp enviado, SID:', data.sid);
+	}
+}
 
 interface NotificationParams {
 	title: string;
@@ -30,28 +62,23 @@ export async function sendEventNotification({ title, message, schoolId, groupId,
 		let userIds: string[] = [];
 
 		if (visibility === 'school') {
-			// A toda la escuela (docentes y directores por defecto, o todos según la política)
-			// Para no saturar, podemos notificar a todos los que tengan rol.
 			const { data: users } = await adminClient
 				.from('profiles')
 				.select('id')
 				.eq('school_id', schoolId);
 			if (users) userIds = users.map(u => u.id);
 		} else if (visibility === 'group' && groupId) {
-			// A un grupo específico
 			const { data: members } = await adminClient
 				.from('staff_group_members')
 				.select('user_id')
 				.eq('group_id', groupId);
 			if (members) userIds = members.map(m => m.user_id);
 		} else {
-			// Si es privado o no hay grupo, no notificamos a nadie más
 			return;
 		}
 
 		if (userIds.length === 0) return;
 
-		// Buscar correos y teléfonos de los usuarios (email no está en public.profiles)
 		const { data: profiles } = await adminClient
 			.from('profiles')
 			.select('id, full_name, phone')
@@ -84,25 +111,22 @@ export async function sendEventNotification({ title, message, schoolId, groupId,
 				}).catch(err => console.error('Error enviando email a', email, err));
 			}
 
-			if (profile.phone && twilioClient && env.TWILIO_WHATSAPP_FROM) {
-				// Formatear el teléfono para Argentina (Twilio requiere +549 seguido de la característica y número sin el 15)
-				let phoneStr = profile.phone.replace(/\D/g, ''); // Limpiar cualquier espacio o guión
-				
+			// 2. Enviar WhatsApp (usando fetch nativo, compatible con Cloudflare)
+			if (profile.phone && env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && env.TWILIO_WHATSAPP_FROM) {
+				let phoneStr = profile.phone.replace(/\D/g, '');
+
 				if (!phoneStr.startsWith('549')) {
 					if (phoneStr.startsWith('54')) {
-						phoneStr = phoneStr.replace(/^54/, '549'); // Le falta el 9 de celular
+						phoneStr = phoneStr.replace(/^54/, '549');
 					} else {
-						phoneStr = `549${phoneStr}`; // Asumimos número local como '1169462905'
+						phoneStr = `549${phoneStr}`;
 					}
 				}
-				
+
 				const phone = `+${phoneStr}`;
-				
-				await twilioClient.messages.create({
-					body: `*Agenda Educativa*\n\nHola ${profile.full_name || ''}, hay un nuevo evento programado:\n\n*${title}*\n${message}\n\nRevisa la plataforma para más detalles.`,
-					from: env.TWILIO_WHATSAPP_FROM,
-					to: `whatsapp:${phone}`
-				}).catch(err => console.error('Error enviando WhatsApp a', phone, err));
+				const body = `*Agenda Educativa*\n\nHola ${profile.full_name || ''}, hay un nuevo evento programado:\n\n*${title}*\n${message}\n\nRevisa la plataforma para más detalles.`;
+
+				await sendWhatsApp(phone, body).catch(err => console.error('Error enviando WhatsApp a', phone, err));
 			}
 		}
 
