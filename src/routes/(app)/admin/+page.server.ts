@@ -194,5 +194,36 @@ export const actions: Actions = {
 		}
 
 		return { success: true };
+	},
+
+	updateDomain: async ({ request, locals: { supabase, profile } }) => {
+		if (profile?.role !== 'admin') return fail(403, { error: 'No autorizado' });
+
+		const formData = await request.formData();
+		const schoolId = formData.get('school_id') as string;
+		let domain = formData.get('domain') as string;
+
+		if (!schoolId) return fail(400, { error: 'ID de escuela requerido.' });
+
+		// Limpiar el dominio (quitar https://, espacios, etc)
+		if (domain) {
+			domain = domain.trim().toLowerCase();
+			domain = domain.replace(/^https?:\/\//, '');
+			domain = domain.replace(/\/$/, '');
+		}
+
+		const { error } = await supabase
+			.from('schools')
+			.update({ custom_domain: domain || null })
+			.eq('id', schoolId);
+
+		if (error) {
+			if (error.code === '23505') {
+				return fail(400, { error: 'Este dominio ya está registrado por otra escuela.' });
+			}
+			return fail(500, { error: 'No se pudo actualizar el dominio.' });
+		}
+
+		return { success: true };
 	}
 };

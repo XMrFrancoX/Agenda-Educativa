@@ -40,6 +40,23 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const { session, user } = await event.locals.safeGetSession();
 	event.locals.user = user;
 
+	// Domain Detection (Multi-tenant)
+	const hostname = event.url.hostname;
+	let tenant = null;
+
+	if (hostname !== 'localhost' && hostname !== '127.0.0.1' && !hostname.includes('vercel.app') && !hostname.includes('pages.dev')) {
+		const { data: schoolDomain } = await event.locals.supabase
+			.from('schools')
+			.select('id, name, logo_url, primary_color, status')
+			.eq('custom_domain', hostname)
+			.maybeSingle();
+		
+		if (schoolDomain) {
+			tenant = schoolDomain;
+		}
+	}
+	event.locals.tenant = tenant;
+
 	// Load user profile (role, school) if authenticated
 	if (user) {
 		const { data: profile } = await event.locals.supabase
@@ -60,6 +77,15 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	} else {
 		event.locals.profile = null;
+	}
+
+	// Cross-domain security check
+	if (event.locals.user && tenant && event.locals.profile) {
+		// Si el usuario tiene una escuela distinta al tenant del dominio, y no es admin global
+		if (event.locals.profile.school_id !== tenant.id && event.locals.profile.role !== 'admin') {
+			await event.locals.supabase.auth.signOut();
+			throw redirect(303, '/login?error=invalid_domain');
+		}
 	}
 
 	// Auth guard: redirect unauthenticated users to /login
