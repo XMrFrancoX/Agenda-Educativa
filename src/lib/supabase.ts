@@ -1,7 +1,5 @@
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
-import { env } from '$env/dynamic/private';
 import { createBrowserClient, createServerClient } from '@supabase/ssr';
-import { createClient } from '@supabase/supabase-js';
 
 /**
  * Create a Supabase client for use in the browser.
@@ -23,15 +21,5 @@ export function createSupabaseServerClient(
 	return createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
 		cookies: { getAll, setAll },
 		global: { fetch }
-	});
-}
-
-/**
- * Create a Supabase admin client using the service_role key.
- * BYPASSES RLS — only use server-side for trusted operations (e.g. storage uploads).
- */
-export function createSupabaseAdminClient() {
-	return createClient(PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-		auth: { persistSession: false, autoRefreshToken: false }
 	});
 }

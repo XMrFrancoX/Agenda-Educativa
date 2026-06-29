@@ -1,6 +1,6 @@
 import type { PageServerLoad, Actions } from './$types';
 import { fail, redirect } from '@sveltejs/kit';
-import { createSupabaseAdminClient } from '$lib/supabase';
+import { createSupabaseAdminClient } from '$lib/supabase.server';
 
 export const load: PageServerLoad = async ({ locals: { supabase, profile } }) => {
 	// Verificar que el usuario tenga rol 'superadmin'
