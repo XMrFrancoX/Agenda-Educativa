@@ -64,6 +64,7 @@ export const actions: Actions = {
 			if (resendError) {
 				console.error('Resend error:', resendError);
 			}
+			}
 
 			return { success: true };
 		} catch (err) {
