@@ -8,14 +8,17 @@ export const load: PageServerLoad = async ({ locals: { supabase, profile } }) =>
 		throw redirect(303, '/calendario');
 	}
 
+	// Usamos el cliente admin para saltear RLS y ver TODOS los datos
+	const adminClient = createSupabaseAdminClient();
+
 	// Obtener la lista completa de escuelas
-	const { data: schools } = await supabase
+	const { data: schools } = await adminClient
 		.from('schools')
 		.select('*')
 		.order('name');
 
 	// Obtener la lista de todos los perfiles en la base de datos
-	const { data: profiles } = await supabase
+	const { data: profiles } = await adminClient
 		.from('profiles')
 		.select(`
 			id,
