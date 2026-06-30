@@ -9,15 +9,31 @@
 	let newSchoolName = $state('');
 	let creatingSchool = $state(false);
 	
-	// Estado para rastrear si un usuario está siendo guardado
-	let savingUserId = $state<string | null>(null);
+	// Búsqueda
+	let searchSchool = $state('');
+	let searchUser = $state('');
 
 	// Filtros reactivos
 	let unassignedUsers = $derived(data.profiles.filter(p => p.school_id === null));
-	let assignedUsers = $derived(data.profiles.filter(p => p.school_id !== null));
+	let assignedUsers = $derived(
+		data.profiles
+			.filter(p => p.school_id !== null)
+			.filter(p => {
+				if (!searchUser) return true;
+				const q = searchUser.toLowerCase();
+				return (p.full_name ?? '').toLowerCase().includes(q) || (p.email ?? '').toLowerCase().includes(q);
+			})
+	);
+	let filteredSchools = $derived(
+		data.schools.filter(s => {
+			if (!searchSchool) return true;
+			return s.name.toLowerCase().includes(searchSchool.toLowerCase());
+		})
+	);
 
 	let uploadingLogoId = $state<string | null>(null);
 	let processingSchoolId = $state<string | null>(null);
+	let savingUserId = $state<string | null>(null);
 </script>
 
 <svelte:head>
@@ -124,8 +140,12 @@
 				</div>
 			</form>
 
+			<div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
+				<input type="text" class="input" placeholder="🔍 Buscar escuela..." bind:value={searchSchool} style="flex:1;" />
+			</div>
+
 			<div class="schools-list">
-				{#each data.schools as school}
+				{#each filteredSchools as school}
 					<div class="school-item" class:suspended={school.status === 'suspended'}>
 						<div class="school-header">
 							{#if school.logo_url}
@@ -259,6 +279,26 @@
 								<button type="submit" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Vincular</button>
 							</form>
 						</div>
+
+						<!-- WhatsApp toggle -->
+						<div style="margin-top: 0.75rem; border-top: 1px solid var(--border-subtle); padding-top: 0.75rem; display:flex; align-items:center; justify-content:space-between;">
+							<div>
+								<span style="font-size:0.75rem; font-weight:600; color:var(--text-secondary);">📱 Notificaciones WhatsApp</span>
+								<span style="display:block; font-size:0.7rem; color:var(--text-muted);">Servicio premium — activar para esta escuela</span>
+							</div>
+							<form method="POST" action="?/toggleWhatsapp" use:enhance={() => {
+								return async ({ result, update }) => {
+									if (result.type === 'success') await invalidateAll();
+									else await update();
+								};
+							}}>
+								<input type="hidden" name="school_id" value={school.id} />
+								<input type="hidden" name="current_value" value={school.whatsapp_enabled ? 'true' : 'false'} />
+								<button type="submit" class="toggle-btn {school.whatsapp_enabled ? 'toggle-on' : 'toggle-off'}" title="{school.whatsapp_enabled ? 'Deshabilitar WhatsApp' : 'Habilitar WhatsApp'}">
+									<span class="toggle-knob"></span>
+								</button>
+							</form>
+						</div>
 					</div>
 				{:else}
 					<p class="empty-text">No hay escuelas creadas.</p>
@@ -271,6 +311,7 @@
 			<h2 class="section-title">
 				<Users size="18" /> Usuarios Asignados
 			</h2>
+			<input type="text" class="input" placeholder="🔍 Buscar por nombre o email..." bind:value={searchUser} style="margin-bottom:1rem; width:100%;" />
 			<div class="users-grid">
 				{#each assignedUsers as user}
 					<div class="user-row">
@@ -518,4 +559,31 @@
 	}
 	
 	.empty-text { font-size: 0.875rem; color: var(--text-muted); font-style: italic; }
+
+	/* Toggle switch */
+	.toggle-btn {
+		position: relative;
+		width: 44px;
+		height: 24px;
+		border-radius: 999px;
+		border: none;
+		cursor: pointer;
+		transition: background 0.25s;
+		flex-shrink: 0;
+	}
+	.toggle-on { background: var(--color-success); }
+	.toggle-off { background: var(--border-default); }
+	.toggle-knob {
+		position: absolute;
+		top: 3px;
+		left: 3px;
+		width: 18px;
+		height: 18px;
+		border-radius: 50%;
+		background: white;
+		transition: transform 0.25s;
+		display: block;
+	}
+	.toggle-on .toggle-knob { transform: translateX(20px); }
 </style>
+

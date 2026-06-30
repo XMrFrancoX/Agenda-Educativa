@@ -91,7 +91,7 @@
 										<option value="">Seleccionar docente...</option>
 										{#each data.teachers as teacher}
 											{#if !group.staff_group_members.some(m => m.user_id === teacher.id)}
-												<option value={teacher.id}>{teacher.full_name || teacher.email}</option>
+												<option value={teacher.id}>{teacher.full_name ?? '(sin nombre)'}</option>
 											{/if}
 										{/each}
 									</select>
@@ -116,16 +116,18 @@
 			<h2 class="section-title">Todos los Docentes</h2>
 			<div class="teachers-list">
 				{#each data.teachers as teacher}
-					<div class="teacher-row">
-						<div class="avatar" style="background:var(--role-teacher)">
-							{(teacher.full_name || teacher.email || 'U')[0].toUpperCase()}
-						</div>
-						<div class="info">
-							<p class="t-name">{teacher.full_name || 'Sin nombre'}</p>
-							<p class="t-email">{teacher.email}</p>
-						</div>
+				<div class="teacher-row">
+					<div class="avatar" style="background:var(--role-teacher)">
+						{(teacher.full_name ?? 'U')[0].toUpperCase()}
 					</div>
-				{/each}
+					<div class="info">
+						<p class="t-name">{teacher.full_name ?? 'Sin nombre'}</p>
+						<p class="t-email">{teacher.role === 'director' ? '📋 Director' : '👩‍🏫 Docente'}</p>
+					</div>
+				</div>
+			{:else}
+				<p style="font-size:0.875rem;color:var(--text-muted);font-style:italic;">No hay docentes en esta escuela.</p>
+			{/each}
 			</div>
 		</div>
 

@@ -240,5 +240,25 @@ export const actions: Actions = {
 		}
 
 		return { success: true };
+	},
+
+	toggleWhatsapp: async ({ request, locals: { profile } }) => {
+		if (profile?.role !== 'superadmin') return fail(403, { error: 'No autorizado' });
+
+		const formData = await request.formData();
+		const schoolId = formData.get('school_id') as string;
+		const current = formData.get('current_value') === 'true';
+
+		if (!schoolId) return fail(400, { error: 'ID de escuela requerido.' });
+
+		const adminClient = createSupabaseAdminClient();
+		const { error } = await adminClient
+			.from('schools')
+			.update({ whatsapp_enabled: !current })
+			.eq('id', schoolId);
+
+		if (error) return fail(500, { error: 'No se pudo actualizar la configuración de WhatsApp.' });
+		return { success: true };
 	}
 };
+

@@ -1,5 +1,6 @@
 import type { PageServerLoad, Actions } from './$types';
 import { fail, redirect } from '@sveltejs/kit';
+import { createSupabaseAdminClient } from '$lib/supabase.server';
 
 export const load: PageServerLoad = async ({ locals: { supabase, profile } }) => {
 	// Verificar que el usuario tenga rol 'admin' o 'superadmin'
@@ -9,8 +10,8 @@ export const load: PageServerLoad = async ({ locals: { supabase, profile } }) =>
 
 	const schoolId = profile.school_id;
 
-	// Obtener la lista de perfiles solo de la misma escuela
-	const { data: profiles } = await supabase
+	const adminClient = createSupabaseAdminClient();
+	const { data: profiles } = await adminClient
 		.from('profiles')
 		.select(`
 			id,
@@ -24,7 +25,7 @@ export const load: PageServerLoad = async ({ locals: { supabase, profile } }) =>
 		.order('created_at', { ascending: false });
 
 	return {
-		schools: [], // No pasamos escuelas porque el admin no puede mover usuarios entre escuelas
+		schools: [],
 		profiles: profiles ?? []
 	};
 };
