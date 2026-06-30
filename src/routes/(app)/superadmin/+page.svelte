@@ -170,7 +170,11 @@
 								return async ({ result, update }) => {
 									uploadingLogoId = null;
 									if (result.type === 'success') await invalidateAll();
-									else await update();
+									else if (result.type === 'failure') {
+										// @ts-ignore
+										alert(result.data?.error || 'Error al subir logo');
+									}
+									await update();
 								};
 							}}>
 								<input type="hidden" name="school_id" value={school.id} />

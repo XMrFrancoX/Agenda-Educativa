@@ -104,10 +104,6 @@ export const actions: Actions = {
 			return fail(400, { error: 'Formato de imagen no soportado.' });
 		}
 
-		// Convertir File a ArrayBuffer para poder subirlo
-		const arrayBuffer = await file.arrayBuffer();
-		const fileBuffer = new Uint8Array(arrayBuffer);
-		const contentType = file.type || 'image/png';
 		const fileName = `${schoolId}-${Date.now()}.${ext}`;
 
 		// Usamos el cliente admin (service_role) para saltar el RLS de Storage
@@ -115,8 +111,8 @@ export const actions: Actions = {
 
 		const { error: uploadError } = await adminClient.storage
 			.from('school_logos')
-			.upload(fileName, fileBuffer, {
-				contentType,
+			.upload(fileName, file, {
+				contentType: file.type || 'image/png',
 				cacheControl: '3600',
 				upsert: true
 			});
