@@ -301,6 +301,7 @@
 									<option value="teacher">Docente</option>
 									<option value="director">Director</option>
 									<option value="admin">Admin</option>
+									<option value="superadmin">Super Admin</option>
 								</select>
 
 								<select name="school_id" class="input slim-select" value={user.school_id}>
