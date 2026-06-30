@@ -348,13 +348,9 @@
 	}
 
 	.alert-card {
-		border: 1px solid var(--color-danger);
-		background: #fef2f2;
-		margin-bottom: 1.5rem;
-	}
-	:global(.dark) .alert-card {
+		border: 1px solid rgba(220, 38, 38, 0.3);
 		background: rgba(220, 38, 38, 0.1);
-		border-color: rgba(220, 38, 38, 0.3);
+		margin-bottom: 1.5rem;
 	}
 	.alert-header {
 		display: flex;
@@ -383,10 +379,9 @@
 		flex-wrap: wrap;
 	}
 	.school-item.suspended {
-		background: #f9fafb;
+		background: rgba(0,0,0,0.2);
 		opacity: 0.8;
 	}
-	:global(.dark) .school-item.suspended { background: rgba(0,0,0,0.2); }
 	
 	.school-header {
 		display: flex;
@@ -473,10 +468,9 @@
 		gap: 1rem;
 	}
 	.user-row.pending {
-		background: white;
-		border-color: rgba(220, 38, 38, 0.2);
+		background: var(--bg-surface);
+		border-color: rgba(220, 38, 38, 0.3);
 	}
-	:global(.dark) .user-row.pending { background: var(--bg-surface); }
 	
 	.user-info {
 		display: flex;
