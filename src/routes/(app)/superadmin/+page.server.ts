@@ -47,7 +47,8 @@ export const actions: Actions = {
 			return fail(400, { error: 'El nombre de la escuela es obligatorio.' });
 		}
 
-		const { error } = await supabase
+		const adminClient = createSupabaseAdminClient();
+		const { error } = await adminClient
 			.from('schools')
 			.insert({ name });
 
@@ -74,7 +75,8 @@ export const actions: Actions = {
 			schoolId = null;
 		}
 
-		const { error } = await supabase
+		const adminClient = createSupabaseAdminClient();
+		const { error } = await adminClient
 			.from('profiles')
 			.update({ role, school_id: schoolId })
 			.eq('id', targetUserId);
@@ -126,7 +128,8 @@ export const actions: Actions = {
 			.from('school_logos')
 			.getPublicUrl(fileName);
 
-		const { error: updateError } = await supabase
+		// Guardar url en la base de datos
+		const { error: updateError } = await adminClient
 			.from('schools')
 			.update({ logo_url: publicUrlData.publicUrl })
 			.eq('id', schoolId);
@@ -149,7 +152,8 @@ export const actions: Actions = {
 
 		const newStatus = currentStatus === 'suspended' ? 'active' : 'suspended';
 
-		const { error } = await supabase
+		const adminClient = createSupabaseAdminClient();
+		const { error } = await adminClient
 			.from('schools')
 			.update({ status: newStatus })
 			.eq('id', schoolId);
@@ -170,7 +174,8 @@ export const actions: Actions = {
 		if (!schoolId) return fail(400, { error: 'ID de escuela requerido.' });
 
 		// La base de datos debe estar configurada con ON DELETE CASCADE
-		const { error } = await supabase
+		const adminClient = createSupabaseAdminClient();
+		const { error } = await adminClient
 			.from('schools')
 			.delete()
 			.eq('id', schoolId);
@@ -192,7 +197,8 @@ export const actions: Actions = {
 
 		if (!schoolId) return fail(400, { error: 'ID de escuela requerido.' });
 
-		const { error } = await supabase
+		const adminClient = createSupabaseAdminClient();
+		const { error } = await adminClient
 			.from('schools')
 			.update({ primary_color: color || null })
 			.eq('id', schoolId);
@@ -220,7 +226,8 @@ export const actions: Actions = {
 			domain = domain.replace(/\/$/, '');
 		}
 
-		const { error } = await supabase
+		const adminClient = createSupabaseAdminClient();
+		const { error } = await adminClient
 			.from('schools')
 			.update({ custom_domain: domain || null })
 			.eq('id', schoolId);
