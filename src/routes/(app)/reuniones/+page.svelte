@@ -111,28 +111,28 @@
 				}}>
 					<div class="form-grid mt-4">
 						<div class="form-group full-width">
-							<label class="input-label">Título *</label>
-							<Input type="text" name="title" placeholder="Ej: Reunión de coordinación docente" bind:value={title} required />
+							<label for="title" class="input-label">Título *</label>
+							<Input id="title" type="text" name="title" placeholder="Ej: Reunión de coordinación docente" bind:value={title} required />
 						</div>
 
 						<div class="form-group full-width">
-							<label class="input-label">Descripción / Temario</label>
-							<Textarea name="description" rows={3} placeholder="Puntos a tratar..." bind:value={description}></Textarea>
+							<label for="description" class="input-label">Descripción / Temario</label>
+							<Textarea id="description" name="description" rows={3} placeholder="Puntos a tratar..." bind:value={description}></Textarea>
 						</div>
 
 						<div class="form-group">
-							<label class="input-label">Fecha y Hora *</label>
-							<Input type="datetime-local" name="date" bind:value={date} required />
+							<label for="date" class="input-label">Fecha y Hora *</label>
+							<Input id="date" type="datetime-local" name="date" bind:value={date} required />
 						</div>
 
 						<div class="form-group">
-							<label class="input-label">Duración (minutos)</label>
-							<Input type="number" name="duration_min" min="15" max="480" step="15" bind:value={duration} />
+							<label for="duration_min" class="input-label">Duración (minutos)</label>
+							<Input id="duration_min" type="number" name="duration_min" min="15" max="480" step="15" bind:value={duration} />
 						</div>
 
 						<div class="form-group full-width">
-							<label class="input-label">Lugar / Link</label>
-							<Input type="text" name="location" placeholder="Ej: Sala de reuniones / meet.google.com/xxx" bind:value={location} />
+							<label for="location" class="input-label">Lugar / Link</label>
+							<Input id="location" type="text" name="location" placeholder="Ej: Sala de reuniones / meet.google.com/xxx" bind:value={location} />
 						</div>
 
 						<!-- Participants -->
@@ -330,14 +330,14 @@
 											</div>
 										</form>
 									{:else}
-										<div class="minutes-display" onclick={() => editingMinutes = meeting.id}>
+										<button type="button" class="minutes-display" onclick={() => editingMinutes = meeting.id}>
 											{#if meeting.minutes}
-												<p style="white-space:pre-wrap;font-size:0.85rem;color:var(--text-secondary);line-height:1.6;">{meeting.minutes}</p>
+												<p style="white-space:pre-wrap;font-size:0.85rem;color:var(--text-secondary);line-height:1.6;margin:0;text-align:left;">{meeting.minutes}</p>
 											{:else}
-												<p style="font-size:0.85rem;color:var(--text-muted);font-style:italic;">Sin acta registrada. Hacé clic para agregar.</p>
+												<p style="font-size:0.85rem;color:var(--text-muted);font-style:italic;margin:0;">Sin acta registrada. Hacé clic para agregar.</p>
 											{/if}
 											<span class="edit-hint">Clic para editar</span>
-										</div>
+										</button>
 									{/if}
 								</div>
 
@@ -401,34 +401,6 @@
 		gap: 0.5rem;
 	}
 
-	/* ── Modal ── */
-	.modal-overlay {
-		position: fixed; inset: 0;
-		background: rgba(0,0,0,0.65);
-		backdrop-filter: blur(4px);
-		display: flex; align-items: center; justify-content: center;
-		z-index: 100;
-		padding: 1rem;
-	}
-	.modal-card {
-		background: var(--bg-elevated);
-		border: 1px solid var(--border-default);
-		border-radius: var(--radius-lg);
-		width: 100%; max-width: 620px;
-		max-height: 90vh;
-		overflow-y: auto;
-		box-shadow: var(--shadow-lg);
-	}
-	.modal-header {
-		display: flex; align-items: center; justify-content: space-between;
-		padding: 1.25rem 1.5rem 0;
-		margin-bottom: 1.25rem;
-	}
-	.modal-title {
-		display: flex; align-items: center; gap: 0.5rem;
-		font-size: 1.125rem; font-weight: 700; color: var(--text-primary);
-		margin: 0;
-	}
 	.icon-btn {
 		background: none; border: none; cursor: pointer;
 		color: var(--text-muted); padding: 0.25rem;
@@ -573,12 +545,16 @@
 
 	/* ── Acta ── */
 	.minutes-section { background: var(--bg-overlay); border-radius: var(--radius-md); padding: 0.875rem; }
-	.minutes-textarea { width: 100%; resize: vertical; font-family: inherit; }
+	
 	.minutes-display {
 		cursor: pointer; position: relative;
 		padding: 0.5rem;
 		border-radius: var(--radius-sm);
 		transition: background var(--transition-fast);
+		width: 100%;
+		text-align: left;
+		background: none;
+		border: none;
 	}
 	.minutes-display:hover { background: var(--bg-highlight); }
 	.edit-hint {

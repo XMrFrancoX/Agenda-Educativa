@@ -98,11 +98,11 @@
 	<!-- Kanban board -->
 	<div class="kanban-board">
 		{#each columns as col}
+			{@const Icon = col.icon}
 			<div class="kanban-column">
 				<!-- Column header -->
 				<div class="kanban-column-header" style="border-top: 3px solid {col.color}">
 					<span class="kanban-column-title" style="color: {col.color}; display: flex; align-items: center; gap: 0.35rem;">
-						{@const Icon = col.icon}
 						<Icon size="16" />
 						{col.label}
 					</span>
