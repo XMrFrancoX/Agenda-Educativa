@@ -15,7 +15,13 @@
 	let selectedEvent = $state<Record<string, any> | null>(null);
 	let editingEvent = $state<Record<string, any> | null>(null);
 	let selectedDateRange = $state<{start: string, end: string, allDay: boolean} | null>(null);
-	let showTeacher = $state(data.preferences?.show_teacher_events ?? false);
+	let showTeacher = $state(false);
+	
+	$effect(() => {
+		if (data.preferences?.show_teacher_events !== undefined && !showTeacher) {
+			showTeacher = data.preferences.show_teacher_events;
+		}
+	});
 	let togglingTeacher = $state(false);
 	let currentView = $state('timeGridWeek');
 

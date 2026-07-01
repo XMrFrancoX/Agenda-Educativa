@@ -102,7 +102,8 @@
 				<!-- Column header -->
 				<div class="kanban-column-header" style="border-top: 3px solid {col.color}">
 					<span class="kanban-column-title" style="color: {col.color}; display: flex; align-items: center; gap: 0.35rem;">
-						<svelte:component this={col.icon} size="16" />
+						{@const Icon = col.icon}
+						<Icon size="16" />
 						{col.label}
 					</span>
 					<span class="kanban-column-count">{tasksByStatus(col.key).length}</span>
@@ -184,7 +185,7 @@
 		<div class="dialog" role="dialog" aria-modal="true" aria-labelledby="create-task-title">
 			<div class="dialog-header">
 				<h2 class="dialog-title" id="create-task-title">Nueva Tarea</h2>
-				<button class="dialog-close" onclick={closeCreate}>
+				<button class="dialog-close" onclick={closeCreate} title="Cerrar ventana">
 					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 						<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
 					</svg>

@@ -261,7 +261,7 @@
 						</div>
 
 						<div style="margin-top: 1rem; border-top: 1px solid var(--border-subtle); padding-top: 0.75rem;">
-							<label class="input-label" style="font-size: 0.75rem;">Dominio Personalizado</label>
+							<label for="domain-{school.id}" class="input-label" style="font-size: 0.75rem;">Dominio Personalizado</label>
 							<form method="POST" action="?/updateDomain" style="display: flex; gap: 0.5rem;" use:enhance={() => {
 								return async ({ result, update }) => {
 									if (result.type === 'success') {
@@ -275,7 +275,7 @@
 								};
 							}}>
 								<input type="hidden" name="school_id" value={school.id} />
-								<input type="text" name="domain" class="input" placeholder="ej: colegio.edu.ar" value={school.custom_domain || ''} style="padding: 0.4rem 0.6rem; font-size: 0.8rem;" />
+								<input id="domain-{school.id}" type="text" name="domain" class="input" placeholder="ej: colegio.edu.ar" value={school.custom_domain || ''} style="padding: 0.4rem 0.6rem; font-size: 0.8rem;" />
 								<button type="submit" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Vincular</button>
 							</form>
 						</div>
@@ -491,7 +491,6 @@
 		width: 130px;
 		font-size: 0.75rem;
 	}
-	.hidden-submit { display: none; }
 
 	.users-grid {
 		display: flex;

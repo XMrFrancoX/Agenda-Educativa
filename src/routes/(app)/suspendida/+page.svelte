@@ -32,10 +32,6 @@
 		max-width: 500px;
 		box-shadow: 0 10px 25px rgba(220, 38, 38, 0.1);
 	}
-	.icon {
-		color: var(--color-danger);
-		margin-bottom: 1.5rem;
-	}
 	h1 {
 		font-size: 1.75rem;
 		font-weight: 700;
