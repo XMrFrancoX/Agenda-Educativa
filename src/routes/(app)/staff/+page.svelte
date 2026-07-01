@@ -122,7 +122,7 @@
 					</div>
 					<div class="info">
 						<p class="t-name">{teacher.full_name ?? 'Sin nombre'}</p>
-						<p class="t-email">{teacher.role === 'director' ? '📋 Director' : '👩‍🏫 Docente'}</p>
+						<p class="t-email">{teacher.role === 'director' ? 'Director' : 'Docente'}</p>
 					</div>
 				</div>
 			{:else}

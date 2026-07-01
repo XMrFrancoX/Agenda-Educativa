@@ -1,8 +1,13 @@
-<script lang="ts">
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import type { PageData } from './$types';
 	import { Calendar, Users, MapPin, Clock, Plus, X, FileText, CheckCircle2, XCircle } from 'lucide-svelte';
+	
+	import { Button } from "$lib/components/ui/button";
+	import { Input } from "$lib/components/ui/input";
+	import { Textarea } from "$lib/components/ui/textarea";
+	import { Checkbox } from "$lib/components/ui/checkbox";
+	import * as Dialog from "$lib/components/ui/dialog";
 
 	let { data }: { data: PageData } = $props();
 
@@ -80,22 +85,16 @@
 			<h1 class="page-title">Reuniones</h1>
 			<p class="page-subtitle">Convocá reuniones, registrá actas y hacé seguimiento de acuerdos</p>
 		</div>
-		<button class="btn btn-primary" onclick={() => (showCreate = true)} id="btn-new-meeting">
-			<Plus size="16" /> Nueva Reunión
-		</button>
-	</div>
-</div>
-
-<div class="page-body">
-
-	<!-- ── Modal Crear Reunión ───────────────────────────── -->
-	{#if showCreate}
-		<div class="modal-overlay" onclick={() => resetForm()}>
-			<div class="modal-card" onclick={(e) => e.stopPropagation()}>
-				<div class="modal-header">
-					<h2 class="modal-title"><Calendar size="20" /> Nueva Reunión</h2>
-					<button class="icon-btn" onclick={() => resetForm()}><X size="18" /></button>
-				</div>
+		<Dialog.Root bind:open={showCreate}>
+			<Dialog.Trigger>
+				<Button id="btn-new-meeting">
+					<Plus size="16" class="mr-2" /> Nueva Reunión
+				</Button>
+			</Dialog.Trigger>
+			<Dialog.Content class="sm:max-w-[620px]">
+				<Dialog.Header>
+					<Dialog.Title class="flex items-center gap-2"><Calendar size="20" /> Nueva Reunión</Dialog.Title>
+				</Dialog.Header>
 
 				<form method="POST" action="?/createMeeting" use:enhance={() => {
 					creating = true;
@@ -109,30 +108,30 @@
 						}
 					};
 				}}>
-					<div class="form-grid">
+					<div class="form-grid mt-4">
 						<div class="form-group full-width">
 							<label class="input-label">Título *</label>
-							<input type="text" name="title" class="input" placeholder="Ej: Reunión de coordinación docente" bind:value={title} required />
+							<Input type="text" name="title" placeholder="Ej: Reunión de coordinación docente" bind:value={title} required />
 						</div>
 
 						<div class="form-group full-width">
 							<label class="input-label">Descripción / Temario</label>
-							<textarea name="description" class="input" rows="3" placeholder="Puntos a tratar..." bind:value={description}></textarea>
+							<Textarea name="description" rows={3} placeholder="Puntos a tratar..." bind:value={description}></Textarea>
 						</div>
 
 						<div class="form-group">
 							<label class="input-label">Fecha y Hora *</label>
-							<input type="datetime-local" name="date" class="input" bind:value={date} required />
+							<Input type="datetime-local" name="date" bind:value={date} required />
 						</div>
 
 						<div class="form-group">
 							<label class="input-label">Duración (minutos)</label>
-							<input type="number" name="duration_min" class="input" min="15" max="480" step="15" bind:value={duration} />
+							<Input type="number" name="duration_min" min="15" max="480" step="15" bind:value={duration} />
 						</div>
 
 						<div class="form-group full-width">
 							<label class="input-label">Lugar / Link</label>
-							<input type="text" name="location" class="input" placeholder="Ej: Sala de reuniones / meet.google.com/xxx" bind:value={location} />
+							<Input type="text" name="location" placeholder="Ej: Sala de reuniones / meet.google.com/xxx" bind:value={location} />
 						</div>
 
 						<!-- Participants -->
@@ -141,13 +140,12 @@
 							<div class="participants-grid">
 								{#each data.staff as member}
 									<label class="participant-chip" class:selected={selectedParticipants.includes(member.id)}>
-										<input
-											type="checkbox"
-											name="participants"
-											value={member.id}
+										<input type="hidden" name="participants" value={member.id} disabled={!selectedParticipants.includes(member.id)} />
+										<Checkbox
+											id="participant-{member.id}"
 											checked={selectedParticipants.includes(member.id)}
-											onchange={() => toggleParticipant(member.id)}
-											style="display:none"
+											onCheckedChange={() => toggleParticipant(member.id)}
+											class="hidden"
 										/>
 										<div class="participant-avatar" style="background: {member.role === 'director' ? 'var(--role-director)' : 'var(--role-teacher)'}">
 											{(member.full_name ?? 'U')[0].toUpperCase()}
@@ -166,28 +164,31 @@
 					</div>
 
 					<div class="modal-actions">
-						<button type="button" class="btn btn-ghost" onclick={() => resetForm()}>Cancelar</button>
-						<button type="submit" class="btn btn-primary" disabled={creating}>
-							{#if creating}<span class="spinner" style="width:16px;height:16px;"></span>{/if}
+						<Button type="button" variant="ghost" onclick={() => resetForm()}>Cancelar</Button>
+						<Button type="submit" disabled={creating}>
+							{#if creating}<span class="spinner" style="width:16px;height:16px;margin-right:0.5rem;"></span>{/if}
 							Crear Reunión
-						</button>
+						</Button>
 					</div>
 				</form>
-			</div>
-		</div>
-	{/if}
+			</Dialog.Content>
+		</Dialog.Root>
+	</div>
+</div>
+
+<div class="page-body">
 
 	<!-- ── Próximas ─────────────────────────────────────── -->
 	<section class="meetings-section">
-		<h2 class="section-heading">📅 Próximas ({upcomingMeetings.length})</h2>
+		<h2 class="section-heading">Próximas ({upcomingMeetings.length})</h2>
 
 		{#if upcomingMeetings.length === 0}
 			<div class="empty-state-card">
 				<Calendar size="36" style="color: var(--text-muted); margin-bottom: 0.5rem;" />
 				<p>No hay reuniones programadas.</p>
-				<button class="btn btn-primary" style="margin-top:1rem;" onclick={() => (showCreate = true)}>
-					<Plus size="14" /> Crear primera reunión
-				</button>
+				<Button class="mt-4" onclick={() => (showCreate = true)}>
+					<Plus size="14" class="mr-2" /> Crear primera reunión
+				</Button>
 			</div>
 		{:else}
 			<div class="meetings-grid">
@@ -262,7 +263,7 @@
 	<!-- ── Historial ─────────────────────────────────────── -->
 	{#if pastMeetings.length > 0}
 		<section class="meetings-section">
-			<h2 class="section-heading">📋 Historial ({pastMeetings.length})</h2>
+			<h2 class="section-heading">Historial ({pastMeetings.length})</h2>
 			<div class="meetings-list">
 				{#each pastMeetings as meeting (meeting.id)}
 					<div class="meeting-row" class:expanded={expandedMeeting === meeting.id}>
@@ -311,21 +312,20 @@
 											};
 										}}>
 											<input type="hidden" name="meeting_id" value={meeting.id} />
-											<textarea
+											<Textarea
 												name="minutes"
-												class="input minutes-textarea"
-												rows="6"
+												rows={6}
 												placeholder="Escribí los puntos tratados, acuerdos y decisiones de la reunión..."
 												value={meeting.minutes ?? ''}
-											></textarea>
+											></Textarea>
 											<div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
-												<button type="submit" class="btn btn-primary" style="padding:0.35rem 0.75rem;font-size:0.8rem;" disabled={savingMinutes}>
-													{#if savingMinutes}<span class="spinner" style="width:12px;height:12px;"></span>{/if}
+												<Button type="submit" disabled={savingMinutes} class="h-8 px-3 text-xs">
+													{#if savingMinutes}<span class="spinner" style="width:12px;height:12px;margin-right:0.25rem;"></span>{/if}
 													Guardar Acta
-												</button>
-												<button type="button" class="btn btn-ghost" style="padding:0.35rem 0.75rem;font-size:0.8rem;" onclick={() => editingMinutes = null}>
+												</Button>
+												<Button type="button" variant="ghost" class="h-8 px-3 text-xs" onclick={() => editingMinutes = null}>
 													Cancelar
-												</button>
+												</Button>
 											</div>
 										</form>
 									{:else}
@@ -335,7 +335,7 @@
 											{:else}
 												<p style="font-size:0.85rem;color:var(--text-muted);font-style:italic;">Sin acta registrada. Hacé clic para agregar.</p>
 											{/if}
-											<span class="edit-hint">✏️ clic para editar</span>
+											<span class="edit-hint">Clic para editar</span>
 										</div>
 									{/if}
 								</div>
@@ -359,9 +359,9 @@
 										}}>
 											<input type="hidden" name="meeting_id" value={meeting.id} />
 											<input type="hidden" name="status" value="completed" />
-											<button type="submit" class="btn btn-ghost" style="font-size:0.8rem;padding:0.35rem 0.75rem;">
-												<CheckCircle2 size="13" /> Marcar completada
-											</button>
+											<Button type="submit" variant="ghost" class="h-8 px-3 text-xs text-success">
+												<CheckCircle2 size="13" class="mr-1" /> Marcar completada
+											</Button>
 										</form>
 									{/if}
 									<form method="POST" action="?/deleteMeeting" use:enhance={(e) => {
@@ -372,9 +372,9 @@
 										};
 									}}>
 										<input type="hidden" name="meeting_id" value={meeting.id} />
-										<button type="submit" class="btn btn-ghost text-danger" style="font-size:0.8rem;padding:0.35rem 0.75rem;">
-											<X size="13" /> Eliminar
-										</button>
+										<Button type="submit" variant="ghost" class="h-8 px-3 text-xs text-destructive">
+											<X size="13" class="mr-1" /> Eliminar
+										</Button>
 									</form>
 								</div>
 							</div>

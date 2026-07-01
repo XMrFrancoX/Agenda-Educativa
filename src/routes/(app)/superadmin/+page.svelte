@@ -283,7 +283,7 @@
 						<!-- WhatsApp toggle -->
 						<div style="margin-top: 0.75rem; border-top: 1px solid var(--border-subtle); padding-top: 0.75rem; display:flex; align-items:center; justify-content:space-between;">
 							<div>
-								<span style="font-size:0.75rem; font-weight:600; color:var(--text-secondary);">📱 Notificaciones WhatsApp</span>
+								<span style="font-size:0.75rem; font-weight:600; color:var(--text-secondary);">Notificaciones WhatsApp</span>
 								<span style="display:block; font-size:0.7rem; color:var(--text-muted);">Servicio premium — activar para esta escuela</span>
 							</div>
 							<form method="POST" action="?/toggleWhatsapp" use:enhance={() => {
