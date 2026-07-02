@@ -125,7 +125,39 @@ export const actions: Actions = {
 		return { success: true };
 	},
 
-	deleteMeeting: async ({ request, locals: { supabase, profile } }) => {
+	updateMeeting: async ({ request, locals: { profile } }) => {
+		if (!profile?.school_id) return fail(403, { error: 'Sin escuela asignada.' });
+
+		const fd = await request.formData();
+		const meetingId = fd.get('meeting_id') as string;
+		const title     = fd.get('title') as string;
+		const description = fd.get('description') as string;
+		const date      = fd.get('date') as string;
+		const duration  = parseInt(fd.get('duration_min') as string) || 60;
+		const location  = fd.get('location') as string;
+
+		if (!meetingId || !title || !date) return fail(400, { error: 'Datos incompletos.' });
+
+		const adminClient = createSupabaseAdminClient();
+		const { error } = await adminClient
+			.from('meetings')
+			.update({
+				title,
+				description: description || null,
+				date,
+				duration_min: duration,
+				location: location || null
+			})
+			.eq('id', meetingId);
+
+		if (error) {
+			console.error('updateMeeting error:', error);
+			return fail(500, { error: 'No se pudo actualizar la reunión.' });
+		}
+		return { success: true };
+	},
+
+	deleteMeeting: async ({ request, locals: { profile } }) => {
 		const fd = await request.formData();
 		const meetingId = fd.get('meeting_id') as string;
 

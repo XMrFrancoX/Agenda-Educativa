@@ -2,7 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import type { PageData } from './$types';
-	import { Calendar, Users, MapPin, Clock, Plus, X, FileText, CheckCircle2, XCircle } from 'lucide-svelte';
+	import { Calendar, Users, MapPin, Clock, Plus, X, FileText, CheckCircle2, XCircle, Edit } from 'lucide-svelte';
 	
 	import { Button } from "$lib/components/ui/button";
 	import { Input } from "$lib/components/ui/input";
@@ -18,7 +18,17 @@
 	let editingMinutes = $state<string | null>(null);
 	let savingMinutes = $state(false);
 
-	// Form fields
+	// Edición de reunión
+	let editingMeeting = $state<Record<string, any> | null>(null);
+	let showEdit = $state(false);
+	let editTitle = $state('');
+	let editDescription = $state('');
+	let editDate = $state('');
+	let editDuration = $state(60);
+	let editLocation = $state('');
+	let updatingMeeting = $state(false);
+
+	// Form fields (crear)
 	let title = $state('');
 	let description = $state('');
 	let date = $state('');
@@ -34,6 +44,17 @@
 		location = '';
 		selectedParticipants = [];
 		showCreate = false;
+	}
+
+	function openEdit(meeting: Record<string, any>) {
+		editingMeeting = meeting;
+		editTitle = meeting.title ?? '';
+		editDescription = meeting.description ?? '';
+		// Formatear fecha para datetime-local (YYYY-MM-DDTHH:mm)
+		editDate = meeting.date ? meeting.date.slice(0, 16) : '';
+		editDuration = meeting.duration_min ?? 60;
+		editLocation = meeting.location ?? '';
+		showEdit = true;
 	}
 
 	function toggleParticipant(id: string) {
@@ -55,24 +76,24 @@
 	}
 
 	function statusLabel(s: string) {
-		return { scheduled: 'Programada', completed: 'Completada', cancelled: 'Cancelada' }[s] ?? s;
+		return { scheduled: 'Programada', completed: 'Completada', cancelled: 'Cancelada', in_progress: 'En curso' }[s] ?? s;
 	}
 	function statusColor(s: string) {
-		return { scheduled: '#6366f1', completed: '#10b981', cancelled: '#ef4444' }[s] ?? '#94a3b8';
+		return { scheduled: '#6366f1', completed: '#10b981', cancelled: '#ef4444', in_progress: '#f59e0b' }[s] ?? '#94a3b8';
 	}
 
-	// Calcular si es futura o pasada
 	function isPast(dt: string) {
 		return new Date(dt) < new Date();
 	}
 
-	// Upcoming / Past split
 	let upcomingMeetings = $derived(
 		(data.meetings ?? []).filter(m => m.status === 'scheduled' && !isPast(m.date))
 	);
 	let pastMeetings = $derived(
 		(data.meetings ?? []).filter(m => m.status !== 'scheduled' || isPast(m.date))
 	);
+
+	// Render card reutilizable para both upcoming & past
 </script>
 
 <svelte:head>
@@ -174,6 +195,61 @@
 				</form>
 			</Dialog.Content>
 		</Dialog.Root>
+
+		<!-- Modal de edición -->
+		<Dialog.Root bind:open={showEdit}>
+			<Dialog.Content class="sm:max-w-[580px]">
+				<Dialog.Header>
+					<Dialog.Title class="flex items-center gap-2"><Edit size="20" /> Editar Reunión</Dialog.Title>
+				</Dialog.Header>
+				{#if editingMeeting}
+					<form method="POST" action="?/updateMeeting" use:enhance={() => {
+						updatingMeeting = true;
+						return async ({ result, update }) => {
+							updatingMeeting = false;
+							if (result.type === 'success') {
+								showEdit = false;
+								editingMeeting = null;
+								await invalidateAll();
+							} else {
+								await update();
+							}
+						};
+					}}>
+						<input type="hidden" name="meeting_id" value={editingMeeting.id} />
+						<div class="form-grid mt-4">
+							<div class="form-group full-width">
+								<label for="edit-title" class="input-label">Título *</label>
+								<Input id="edit-title" type="text" name="title" bind:value={editTitle} required />
+							</div>
+							<div class="form-group full-width">
+								<label for="edit-desc" class="input-label">Descripción / Temario</label>
+								<Textarea id="edit-desc" name="description" rows={3} bind:value={editDescription}></Textarea>
+							</div>
+							<div class="form-group">
+								<label for="edit-date" class="input-label">Fecha y Hora *</label>
+								<Input id="edit-date" type="datetime-local" name="date" bind:value={editDate} required />
+							</div>
+							<div class="form-group">
+								<label for="edit-duration" class="input-label">Duración (minutos)</label>
+								<Input id="edit-duration" type="number" name="duration_min" min="15" max="480" step="15" bind:value={editDuration} />
+							</div>
+							<div class="form-group full-width">
+								<label for="edit-location" class="input-label">Lugar / Link</label>
+								<Input id="edit-location" type="text" name="location" bind:value={editLocation} />
+							</div>
+						</div>
+						<div class="modal-actions">
+							<Button type="button" variant="ghost" onclick={() => { showEdit = false; editingMeeting = null; }}>Cancelar</Button>
+							<Button type="submit" disabled={updatingMeeting}>
+								{#if updatingMeeting}<span class="spinner" style="width:16px;height:16px;margin-right:0.5rem;"></span>{/if}
+								Guardar Cambios
+							</Button>
+						</div>
+					</form>
+				{/if}
+			</Dialog.Content>
+		</Dialog.Root>
 	</div>
 </div>
 
@@ -210,6 +286,10 @@
 								</div>
 							</div>
 							<div class="meeting-actions-top">
+								<!-- Editar -->
+								<button type="button" class="icon-btn" title="Editar" onclick={() => openEdit(meeting)}>
+									<Edit size="15" />
+								</button>
 								<!-- Completar -->
 								<form method="POST" action="?/updateStatus" use:enhance={() => {
 									return async ({ result, update }) => {
@@ -254,6 +334,22 @@
 								<div class="mini-avatar more">+{(meeting.meeting_participants ?? []).length - 6}</div>
 							{/if}
 							<span class="participants-count">{(meeting.meeting_participants ?? []).length} convocados</span>
+						</div>
+
+						<!-- Eliminar -->
+						<div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--border-subtle);">
+							<form method="POST" action="?/deleteMeeting" use:enhance={(e) => {
+								if (!confirm('¿Eliminar esta reunión? No se puede deshacer.')) { e.cancel(); return; }
+								return async ({ result, update }) => {
+									if (result.type === 'success') await invalidateAll();
+									else await update();
+								};
+							}}>
+								<input type="hidden" name="meeting_id" value={meeting.id} />
+								<Button type="submit" variant="ghost" class="h-7 px-2 text-xs text-destructive w-full">
+									<X size="12" class="mr-1" /> Eliminar reunión
+								</Button>
+							</form>
 						</div>
 					</div>
 				{/each}
@@ -350,7 +446,10 @@
 								</div>
 
 								<!-- Acciones de historial -->
-								<div style="display:flex;gap:0.5rem;margin-top:1rem;">
+								<div style="display:flex;gap:0.5rem;margin-top:1rem;flex-wrap:wrap;">
+									<Button type="button" variant="ghost" class="h-8 px-3 text-xs" onclick={() => openEdit(meeting)}>
+										<Edit size="13" class="mr-1" /> Editar
+									</Button>
 									{#if meeting.status !== 'completed'}
 										<form method="POST" action="?/updateStatus" use:enhance={() => {
 											return async ({ result, update }) => {
