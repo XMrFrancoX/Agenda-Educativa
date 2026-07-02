@@ -304,12 +304,11 @@
 	{/if}
 </div>
 
-<!-- ── Modal Crear Reunión ─── -->
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 {#if showCreate}
 	<div class="dialog-backdrop" onclick={handleBackdropClick}>
-		<div class="dialog meeting-dialog" role="dialog" aria-modal="true" aria-labelledby="create-meeting-title">
+		<div class="dialog meeting-dialog" role="dialog" aria-modal="true" aria-labelledby="create-meeting-title" onclick={e => e.stopPropagation()}>
 			<div class="dialog-header">
 				<h2 class="dialog-title" id="create-meeting-title">Nueva Reunión</h2>
 				<button class="dialog-close" onclick={() => (showCreate = false)} aria-label="Cerrar">
@@ -380,12 +379,11 @@
 	</div>
 {/if}
 
-<!-- ── Modal Editar Reunión ─── -->
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 {#if showEdit && editingMeeting}
 	<div class="dialog-backdrop" onclick={handleBackdropClick}>
-		<div class="dialog meeting-dialog" role="dialog" aria-modal="true" aria-labelledby="edit-meeting-title">
+		<div class="dialog meeting-dialog" role="dialog" aria-modal="true" aria-labelledby="edit-meeting-title" onclick={e => e.stopPropagation()}>
 			<div class="dialog-header">
 				<h2 class="dialog-title" id="edit-meeting-title">Editar Reunión</h2>
 				<button class="dialog-close" onclick={closeEdit} aria-label="Cerrar">
