@@ -147,7 +147,7 @@
 				<div class="detail-actions">
 					<button
 						class="btn btn-ghost"
-						onclick={() => { close(); onEdit?.(event!); }}
+						onclick={() => { const ev = event!; close(); onEdit?.(ev); }}
 						id="btn-edit-event"
 					>
 						<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
