@@ -93,13 +93,12 @@ export async function sendEventNotification({ title, message, schoolId, groupId,
 		for (const profile of profiles) {
 			const userPrefs = prefMap.get(profile.id) ?? { notify_email: true, notify_whatsapp: false };
 
-			// 1. Enviar Email
-			if (userPrefs.notify_email) {
-				const { data: userAuth } = await adminClient.auth.admin.getUserById(profile.id);
-				const email = userAuth?.user?.email;
+			// 1. Enviar Email (By-pass de userPrefs temporalmente por bug reportado)
+			const { data: userAuth } = await adminClient.auth.admin.getUserById(profile.id);
+			const email = userAuth?.user?.email;
 
-				if (email && env.RESEND_API_KEY) {
-					try {
+			if (email && env.RESEND_API_KEY) {
+				try {
 						const res = await fetch('https://api.resend.com/emails', {
 							method: 'POST',
 							headers: {
@@ -109,6 +108,7 @@ export async function sendEventNotification({ title, message, schoolId, groupId,
 							body: JSON.stringify({
 								from: env.EMAIL_FROM || 'Agenda Educativa <onboarding@resend.dev>',
 								to: email,
+								reply_to: 'nmfsoluciones@gmail.com',
 								subject: `Nuevo Evento: ${title}`,
 								html: `
 									<div style="font-family: sans-serif; padding: 20px;">
@@ -131,7 +131,6 @@ export async function sendEventNotification({ title, message, schoolId, groupId,
 						console.error('Error enviando email a', email, err);
 					}
 				}
-			}
 
 			// 2. Enviar WhatsApp (usando fetch nativo, compatible con Cloudflare)
 			if (userPrefs.notify_whatsapp && profile.phone && env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && env.TWILIO_WHATSAPP_FROM) {
