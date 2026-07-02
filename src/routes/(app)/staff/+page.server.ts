@@ -14,7 +14,7 @@ export const load: PageServerLoad = async ({ locals: { supabase, profile } }) =>
 		.from('profiles')
 		.select('id, full_name, email, role')
 		.eq('school_id', profile?.school_id)
-		.in('role', ['teacher', 'director', 'admin']);
+		.in('role', ['teacher', 'director', 'admin', 'superadmin']);
 
 	if (teacherError) console.error('Teachers load error:', teacherError.message);
 

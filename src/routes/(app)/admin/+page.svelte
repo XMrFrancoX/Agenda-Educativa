@@ -58,9 +58,8 @@
 						<input type="hidden" name="user_id" value={user.id} />
 						
 						<div class="form-group-inline">
-							<!-- El Admin de la escuela no puede crear superadmins -->
-							<!-- Tampoco puede modificar su propio rol a superadmin, ni ver superadmins de otras escuelas -->
-							<select name="role" class="input slim-select" value={user.role} required disabled={user.role === 'superadmin'}>
+							<!-- El Admin de la escuela no puede modificar su propio rol a superadmin -->
+							<select name="role" class="input slim-select" value={user.role} required disabled={user.role === 'superadmin'} title={user.role === 'superadmin' ? 'Tu rol actual de dueño del sistema no se puede modificar desde aquí por seguridad.' : 'Cambiar rol'}>
 								<option value="student">Alumno/a</option>
 								<option value="tutor">Tutor/a</option>
 								<option value="teacher">Docente</option>
@@ -82,6 +81,12 @@
 						</div>
 					</form>
 				</div>
+				<!-- Mensaje de aclaración solo para superadmins -->
+				{#if user.role === 'superadmin'}
+					<p class="role-hint" style="font-size: 0.75rem; color: var(--text-muted); padding-left: 3rem; margin-top: -0.5rem; margin-bottom: 1rem;">
+						* Tu rol es Super Admin (Dueño de la plataforma). Por medidas de seguridad, no podés revocar tus propios permisos.
+					</p>
+				{/if}
 			{:else}
 				<p class="empty-text">No hay usuarios en esta escuela.</p>
 			{/each}

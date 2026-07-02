@@ -5,13 +5,7 @@
 
 	let { data }: { data: PageData } = $props();
 
-	let prefs = $state<Record<string, any>>({});
-	
-	$effect(() => {
-		if (data.preferences && Object.keys(prefs).length === 0) {
-			prefs = { ...data.preferences };
-		}
-	});
+	let prefs = $state({ ...data.preferences });
 	let saving = $state(false);
 	let saved = $state(false);
 	let newCatName = $state('');

@@ -1,13 +1,9 @@
 import { env } from '$env/dynamic/private';
 import { PUBLIC_SUPABASE_URL } from '$env/static/public';
 import { createClient } from '@supabase/supabase-js';
-import { Resend } from 'resend';
-
 const adminClient = createClient(PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY || '', {
 	auth: { persistSession: false, autoRefreshToken: false }
 });
-
-const resend = new Resend(env.RESEND_API_KEY || 're_dummy_key_to_prevent_crash_during_build');
 
 /**
  * Envía un WhatsApp usando la API REST de Twilio con fetch nativo.
@@ -86,33 +82,59 @@ export async function sendEventNotification({ title, message, schoolId, groupId,
 
 		if (!profiles) return;
 
-		for (const profile of profiles) {
-			// 1. Enviar Email
-			const { data: userAuth } = await adminClient.auth.admin.getUserById(profile.id);
-			const email = userAuth?.user?.email;
+		// Cargar preferencias para filtrar notificaciones
+		const { data: preferences } = await adminClient
+			.from('user_preferences')
+			.select('user_id, notify_email, notify_whatsapp')
+			.in('user_id', userIds);
+			
+		const prefMap = new Map(preferences?.map(p => [p.user_id, p]) ?? []);
 
-			if (email && env.RESEND_API_KEY) {
-				await resend.emails.send({
-					from: env.EMAIL_FROM || 'Agenda Educativa <onboarding@resend.dev>',
-					to: email,
-					replyTo: 'nmfsoluciones@gmail.com',
-					subject: `Nuevo Evento: ${title}`,
-					html: `
-						<div style="font-family: sans-serif; padding: 20px;">
-							<h2>Hola, ${profile.full_name || 'Usuario'}</h2>
-							<p>Se ha programado un nuevo evento en tu Agenda Educativa:</p>
-							<div style="background: #f3f4f6; padding: 15px; border-left: 4px solid #6366f1; margin: 20px 0;">
-								<h3 style="margin: 0 0 10px 0; color: #111827;">${title}</h3>
-								<p style="margin: 0; color: #4b5563;">${message}</p>
-							</div>
-							<p>Puedes revisar los detalles entrando al Calendario.</p>
-						</div>
-					`
-				}).catch(err => console.error('Error enviando email a', email, err));
+		for (const profile of profiles) {
+			const userPrefs = prefMap.get(profile.id) ?? { notify_email: true, notify_whatsapp: false };
+
+			// 1. Enviar Email
+			if (userPrefs.notify_email) {
+				const { data: userAuth } = await adminClient.auth.admin.getUserById(profile.id);
+				const email = userAuth?.user?.email;
+
+				if (email && env.RESEND_API_KEY) {
+					try {
+						const res = await fetch('https://api.resend.com/emails', {
+							method: 'POST',
+							headers: {
+								'Authorization': `Bearer ${env.RESEND_API_KEY}`,
+								'Content-Type': 'application/json'
+							},
+							body: JSON.stringify({
+								from: env.EMAIL_FROM || 'Agenda Educativa <onboarding@resend.dev>',
+								to: email,
+								subject: `Nuevo Evento: ${title}`,
+								html: `
+									<div style="font-family: sans-serif; padding: 20px;">
+										<h2>Hola, ${profile.full_name || 'Usuario'}</h2>
+										<p>Se ha programado un nuevo evento en tu Agenda Educativa:</p>
+										<div style="background: #f3f4f6; padding: 15px; border-left: 4px solid #6366f1; margin: 20px 0;">
+											<h3 style="margin: 0 0 10px 0; color: #111827;">${title}</h3>
+											<p style="margin: 0; color: #4b5563;">${message}</p>
+										</div>
+										<p>Puedes revisar los detalles entrando al Calendario.</p>
+									</div>
+								`
+							})
+						});
+						if (!res.ok) {
+							const errData = await res.text();
+							console.error('Error Resend API:', errData);
+						}
+					} catch(err) {
+						console.error('Error enviando email a', email, err);
+					}
+				}
 			}
 
 			// 2. Enviar WhatsApp (usando fetch nativo, compatible con Cloudflare)
-			if (profile.phone && env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && env.TWILIO_WHATSAPP_FROM) {
+			if (userPrefs.notify_whatsapp && profile.phone && env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && env.TWILIO_WHATSAPP_FROM) {
 				let phoneStr = profile.phone.replace(/\D/g, '');
 
 				if (!phoneStr.startsWith('549')) {

@@ -102,7 +102,7 @@
 			selectMirror: true,
 			editable: false, // drag-to-edit off for now
 			eventClick: (info: any) => {
-				selectedEvent = info.event.extendedProps;
+				selectedEvent = { ...info.event.extendedProps, id: info.event.id };
 				showDetailModal = true;
 			},
 			select: (info: any) => {

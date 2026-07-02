@@ -14,7 +14,20 @@ export const load: PageServerLoad = async ({ locals: { supabase, profile, safeGe
 		.select('*')
 		.order('name');
 
-	return { profile, user, preferences, categories: categories ?? [] };
+	const defaultPreferences = {
+		show_teacher_events: false,
+		notify_email: true,
+		notify_whatsapp: false,
+		notify_24h: true,
+		notify_1h: true
+	};
+
+	return { 
+		profile, 
+		user, 
+		preferences: preferences ?? defaultPreferences, 
+		categories: categories ?? [] 
+	};
 };
 
 export const actions = {

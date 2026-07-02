@@ -30,7 +30,7 @@ export const load: PageServerLoad = async ({ locals: { supabase, profile } }) =>
 		.from('profiles')
 		.select('id, full_name, role')
 		.eq('school_id', schoolId)
-		.in('role', ['teacher', 'director', 'admin']);
+		.in('role', ['teacher', 'director', 'admin', 'superadmin']);
 
 	return {
 		meetings: meetings ?? [],
