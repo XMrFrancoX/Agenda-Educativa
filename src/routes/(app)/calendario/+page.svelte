@@ -31,6 +31,15 @@
 
 	const isDirector = $derived(data.profile?.role === 'director' || data.profile?.role === 'admin' || data.profile?.role === 'superadmin');
 
+	// Si sos director/admin/superadmin y tenés el toggle "Ver actividades de
+	// docentes" apagado, se ocultan del calendario los eventos creados por
+	// usuarios con rol 'teacher'.
+	const visibleEvents = $derived(
+		isDirector && !showTeacher
+			? data.events.filter((e: any) => e.profiles?.role !== 'teacher')
+			: data.events
+	);
+
 	// Map DB events → FullCalendar event format
 	function mapToFCEvents(events: typeof data.events) {
 		return events.map((e) => {
@@ -97,7 +106,7 @@
 				list: 'Lista'
 			},
 			eventDisplay: 'list-item', // Fuerza a que TODOS los eventos (incluso allDay) se vean como puntito
-			events: mapToFCEvents(data.events),
+			events: mapToFCEvents(visibleEvents),
 			selectable: true,
 			selectMirror: true,
 			editable: false, // drag-to-edit off for now
@@ -122,9 +131,9 @@
 		return () => calendarInstance?.destroy();
 	});
 
-	// Reactively update calendar when events change
+	// Reactively update calendar when events (or the teacher-events toggle) change
 	$effect(() => {
-		const events = data.events;
+		const events = visibleEvents;
 		if (calendarInstance) {
 			calendarInstance.removeAllEvents();
 			calendarInstance.addEventSource(mapToFCEvents(events));
