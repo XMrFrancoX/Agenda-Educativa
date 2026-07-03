@@ -3,15 +3,37 @@ node_modules/
 build/
 dist/
 .env
-.env.local
+.env.*
+!.env.example
 *.local
 .DS_Store
 Thumbs.db
 *.log
+npm-debug.log*
 .wrangler/
 .cloudflare/
+.vercel/
 
 # Ignorar archivos SQL (migraciones, dumps, etc.)
 *.sql
 supabase/migrations/
 scratch/
+
+# Editores / SO
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Scripts de prueba ad-hoc (suelen tener credenciales hardcodeadas pegadas a mano)
+test-*.js
+test-*.ts
+*.local.js
+*.local.ts
+
+# Credenciales y llaves sueltas
+*.pem
+*.key
+*.p12
+*.cert
+*credentials*.json
+*service-account*.json
