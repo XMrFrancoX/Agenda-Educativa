@@ -62,12 +62,19 @@
 		}
 	}
 
+	// La columna `date` se guarda como si la hora local fuera UTC (bug conocido de
+	// almacenamiento). Sacamos el sufijo de zona horaria (Z o +hh:mm) para que el
+	// navegador la trate como hora local y muestre el horario que se ingresó,
+	// igual que hace el Calendario con starts_at/ends_at.
+	function stripTz(dt: string) {
+		return dt.replace(/(Z|[+-]\d{2}:\d{2})$/, '');
+	}
 	function formatDate(dt: string) {
-		const d = new Date(dt);
+		const d = new Date(stripTz(dt));
 		return d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 	}
 	function formatTime(dt: string) {
-		const d = new Date(dt);
+		const d = new Date(stripTz(dt));
 		return d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
 	}
 	function statusLabel(s: string) {
@@ -76,7 +83,7 @@
 	function statusColor(s: string) {
 		return { scheduled: '#6366f1', completed: '#10b981', cancelled: '#ef4444', in_progress: '#f59e0b' }[s] ?? '#94a3b8';
 	}
-	function isPast(dt: string) { return new Date(dt) < new Date(); }
+	function isPast(dt: string) { return new Date(stripTz(dt)) < new Date(); }
 
 	function handleBackdropClick(e: MouseEvent) {
 		if ((e.target as HTMLElement).classList.contains('dialog-backdrop')) {
@@ -129,8 +136,8 @@
 					<div class="meeting-card upcoming">
 						<div class="meeting-card-header">
 							<div class="meeting-date-badge">
-								<span class="meeting-day">{new Date(meeting.date).getDate()}</span>
-								<span class="meeting-month">{new Date(meeting.date).toLocaleDateString('es-AR', { month: 'short' }).replace('.','')}
+								<span class="meeting-day">{new Date(stripTz(meeting.date)).getDate()}</span>
+								<span class="meeting-month">{new Date(stripTz(meeting.date)).toLocaleDateString('es-AR', { month: 'short' }).replace('.','')}
 								</span>
 							</div>
 							<div class="meeting-info">

@@ -1,6 +1,7 @@
 import type { PageServerLoad, Actions } from './$types';
 import { fail, redirect } from '@sveltejs/kit';
 import { createSupabaseAdminClient } from '$lib/supabase.server';
+import { sendMeetingNotification } from '$lib/server/notifications';
 
 export const load: PageServerLoad = async ({ locals: { supabase, profile } }) => {
 	if (!profile?.id) throw redirect(303, '/login');
@@ -86,6 +87,35 @@ export const actions: Actions = {
 					status: uid === profile.id ? 'confirmed' : 'invited'
 				}))
 			);
+		}
+
+		// Notificar a todos los participantes (incluye al creador si se agregó como participante)
+		if (allParticipants.length > 0) {
+			// Formateo por string, igual que en Calendario: `date` es un datetime-local
+			// ("YYYY-MM-DDTHH:mm") sin zona horaria, así que parsearlo con `new Date()`
+			// depende de la zona horaria del servidor y desfasa el horario mostrado.
+			let dateStr = date;
+			if (date.includes('T')) {
+				const [datePart, timePart] = date.split('T');
+				const [year, month, day] = datePart.split('-').map(Number);
+				const [hour, minute] = timePart.slice(0, 5).split(':').map(Number);
+				dateStr = `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year} de ${timePart.slice(0, 5)} hs`;
+
+				// Hora aprox. de fin = inicio + duración. Se calcula con Date.UTC/getUTC*
+				// (aritmética pura sobre los números, sin tocar zona horaria del servidor).
+				const startUTC = Date.UTC(year, month - 1, day, hour, minute);
+				const end = new Date(startUTC + duration * 60000);
+				const endTimeStr = `${String(end.getUTCHours()).padStart(2, '0')}:${String(end.getUTCMinutes()).padStart(2, '0')}`;
+
+				if (end.getUTCDate() === day && end.getUTCMonth() === month - 1 && end.getUTCFullYear() === year) {
+					dateStr += ` a ${endTimeStr} hs (aprox.)`;
+				} else {
+					dateStr += ` hasta el ${String(end.getUTCDate()).padStart(2, '0')}/${String(end.getUTCMonth() + 1).padStart(2, '0')}/${end.getUTCFullYear()} a las ${endTimeStr} hs (aprox.)`;
+				}
+			}
+			const message = `${description ? description + '\n\n' : ''}Fecha: ${dateStr}${location ? `\nLugar: ${location}` : ''}`;
+
+			await sendMeetingNotification(title, message, allParticipants);
 		}
 
 		return { success: true };

@@ -50,108 +50,161 @@ interface NotificationParams {
 	visibility?: 'private' | 'group' | 'school';
 }
 
-/**
- * Envía notificaciones por Email y WhatsApp a los usuarios correspondientes.
- */
-export async function sendEventNotification({ title, message, schoolId, groupId, visibility }: NotificationParams) {
-	try {
-		let userIds: string[] = [];
+interface NotifyResult {
+	sent: number;
+	failed: number;
+}
 
+/**
+ * Envía Email y WhatsApp a una lista concreta de usuarios. Loggea conteos y
+ * causas de fallo (key faltante, dominio no verificado, etc.) porque estos
+ * errores no llegan a la UI y solo se ven en los logs de Cloudflare Pages.
+ */
+async function notifyUsers(userIds: string[], title: string, message: string, kind: 'event' | 'meeting' = 'event'): Promise<NotifyResult> {
+	if (userIds.length === 0) return { sent: 0, failed: 0 };
+
+	if (!env.RESEND_API_KEY) {
+		console.error('notifyUsers: RESEND_API_KEY no está configurada en este entorno, no se pueden enviar emails.');
+	}
+
+	const { data: profiles, error: profilesError } = await adminClient
+		.from('profiles')
+		.select('id, full_name, phone')
+		.in('id', userIds);
+
+	if (profilesError) {
+		console.error('notifyUsers: error cargando profiles:', profilesError.message);
+		return { sent: 0, failed: userIds.length };
+	}
+	if (!profiles || profiles.length === 0) return { sent: 0, failed: 0 };
+
+	// Cargar preferencias para filtrar notificaciones
+	const { data: preferences } = await adminClient
+		.from('user_preferences')
+		.select('user_id, notify_email, notify_whatsapp')
+		.in('user_id', userIds);
+
+	const prefMap = new Map(preferences?.map(p => [p.user_id, p]) ?? []);
+
+	const subject = kind === 'meeting' ? `Nueva Reunión: ${title}` : `Nuevo Evento: ${title}`;
+	const heading = kind === 'meeting'
+		? 'Se ha programado una nueva reunión en tu Agenda Educativa:'
+		: 'Se ha programado un nuevo evento en tu Agenda Educativa:';
+	const footer = kind === 'meeting' ? 'Puedes revisar los detalles entrando a Reuniones.' : 'Puedes revisar los detalles entrando al Calendario.';
+
+	let sent = 0;
+	let failed = 0;
+
+	for (const profile of profiles) {
+		const userPrefs = prefMap.get(profile.id) ?? { notify_email: true, notify_whatsapp: false };
+
+		// 1. Enviar Email (By-pass de userPrefs temporalmente por bug reportado)
+		const { data: userAuth, error: authError } = await adminClient.auth.admin.getUserById(profile.id);
+		if (authError) console.error(`notifyUsers: error obteniendo email de usuario ${profile.id}:`, authError.message);
+		const email = userAuth?.user?.email;
+
+		if (email && env.RESEND_API_KEY) {
+			try {
+				const res = await fetch('https://api.resend.com/emails', {
+					method: 'POST',
+					headers: {
+						'Authorization': `Bearer ${env.RESEND_API_KEY}`,
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						from: env.EMAIL_FROM || 'Agenda Educativa <onboarding@resend.dev>',
+						to: email,
+						reply_to: 'nmfsoluciones@gmail.com',
+						subject,
+						html: `
+							<div style="font-family: sans-serif; padding: 20px;">
+								<h2>Hola, ${profile.full_name || 'Usuario'}</h2>
+								<p>${heading}</p>
+								<div style="background: #f3f4f6; padding: 15px; border-left: 4px solid #6366f1; margin: 20px 0;">
+									<h3 style="margin: 0 0 10px 0; color: #111827;">${title}</h3>
+									<p style="margin: 0; color: #4b5563;">${message}</p>
+								</div>
+								<p>${footer}</p>
+							</div>
+						`
+					})
+				});
+				if (!res.ok) {
+					const errData = await res.text();
+					console.error(`notifyUsers: Resend API respondió ${res.status} al enviar a ${email}:`, errData);
+					failed++;
+				} else {
+					sent++;
+				}
+			} catch (err) {
+				console.error('notifyUsers: excepción enviando email a', email, err);
+				failed++;
+			}
+		} else if (!email) {
+			console.warn(`notifyUsers: usuario ${profile.id} no tiene email en auth.users, se omite.`);
+		}
+
+		// 2. Enviar WhatsApp (usando fetch nativo, compatible con Cloudflare)
+		if (userPrefs.notify_whatsapp && profile.phone && env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && env.TWILIO_WHATSAPP_FROM) {
+			let phoneStr = profile.phone.replace(/\D/g, '');
+
+			if (!phoneStr.startsWith('549')) {
+				if (phoneStr.startsWith('54')) {
+					phoneStr = phoneStr.replace(/^54/, '549');
+				} else {
+					phoneStr = `549${phoneStr}`;
+				}
+			}
+
+			const phone = `+${phoneStr}`;
+			const body = `*Agenda Educativa*\n\nHola ${profile.full_name || ''}, hay ${kind === 'meeting' ? 'una nueva reunión programada' : 'un nuevo evento programado'}:\n\n*${title}*\n${message}\n\nRevisa la plataforma para más detalles.`;
+
+			await sendWhatsApp(phone, body).catch(err => console.error('Error enviando WhatsApp a', phone, err));
+		}
+	}
+
+	console.log(`notifyUsers[${kind}]: ${sent} enviados, ${failed} fallidos de ${profiles.length} destinatarios.`);
+	return { sent, failed };
+}
+
+/**
+ * Envía notificaciones por Email y WhatsApp a los destinatarios de un evento
+ * de calendario, resueltos por escuela o por grupo según su visibilidad.
+ */
+export async function sendEventNotification({ title, message, schoolId, groupId, visibility }: NotificationParams): Promise<NotifyResult> {
+	let userIds: string[] = [];
+
+	try {
 		if (visibility === 'school') {
-			const { data: users } = await adminClient
+			const { data: users, error } = await adminClient
 				.from('profiles')
 				.select('id')
 				.eq('school_id', schoolId);
-			if (users) userIds = users.map(u => u.id);
+			if (error) console.error('sendEventNotification: error cargando profiles de la escuela:', error.message);
+			userIds = users?.map(u => u.id) ?? [];
 		} else if (visibility === 'group' && groupId) {
-			const { data: members } = await adminClient
+			const { data: members, error } = await adminClient
 				.from('staff_group_members')
 				.select('user_id')
 				.eq('group_id', groupId);
-			if (members) userIds = members.map(m => m.user_id);
+			if (error) console.error('sendEventNotification: error cargando miembros del grupo:', error.message);
+			userIds = members?.map(m => m.user_id) ?? [];
 		} else {
-			return;
+			return { sent: 0, failed: 0 };
 		}
-
-		if (userIds.length === 0) return;
-
-		const { data: profiles } = await adminClient
-			.from('profiles')
-			.select('id, full_name, phone')
-			.in('id', userIds);
-
-		if (!profiles) return;
-
-		// Cargar preferencias para filtrar notificaciones
-		const { data: preferences } = await adminClient
-			.from('user_preferences')
-			.select('user_id, notify_email, notify_whatsapp')
-			.in('user_id', userIds);
-			
-		const prefMap = new Map(preferences?.map(p => [p.user_id, p]) ?? []);
-
-		for (const profile of profiles) {
-			const userPrefs = prefMap.get(profile.id) ?? { notify_email: true, notify_whatsapp: false };
-
-			// 1. Enviar Email (By-pass de userPrefs temporalmente por bug reportado)
-			const { data: userAuth } = await adminClient.auth.admin.getUserById(profile.id);
-			const email = userAuth?.user?.email;
-
-			if (email && env.RESEND_API_KEY) {
-				try {
-						const res = await fetch('https://api.resend.com/emails', {
-							method: 'POST',
-							headers: {
-								'Authorization': `Bearer ${env.RESEND_API_KEY}`,
-								'Content-Type': 'application/json'
-							},
-							body: JSON.stringify({
-								from: env.EMAIL_FROM || 'Agenda Educativa <onboarding@resend.dev>',
-								to: email,
-								reply_to: 'nmfsoluciones@gmail.com',
-								subject: `Nuevo Evento: ${title}`,
-								html: `
-									<div style="font-family: sans-serif; padding: 20px;">
-										<h2>Hola, ${profile.full_name || 'Usuario'}</h2>
-										<p>Se ha programado un nuevo evento en tu Agenda Educativa:</p>
-										<div style="background: #f3f4f6; padding: 15px; border-left: 4px solid #6366f1; margin: 20px 0;">
-											<h3 style="margin: 0 0 10px 0; color: #111827;">${title}</h3>
-											<p style="margin: 0; color: #4b5563;">${message}</p>
-										</div>
-										<p>Puedes revisar los detalles entrando al Calendario.</p>
-									</div>
-								`
-							})
-						});
-						if (!res.ok) {
-							const errData = await res.text();
-							console.error('Error Resend API:', errData);
-						}
-					} catch(err) {
-						console.error('Error enviando email a', email, err);
-					}
-				}
-
-			// 2. Enviar WhatsApp (usando fetch nativo, compatible con Cloudflare)
-			if (userPrefs.notify_whatsapp && profile.phone && env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && env.TWILIO_WHATSAPP_FROM) {
-				let phoneStr = profile.phone.replace(/\D/g, '');
-
-				if (!phoneStr.startsWith('549')) {
-					if (phoneStr.startsWith('54')) {
-						phoneStr = phoneStr.replace(/^54/, '549');
-					} else {
-						phoneStr = `549${phoneStr}`;
-					}
-				}
-
-				const phone = `+${phoneStr}`;
-				const body = `*Agenda Educativa*\n\nHola ${profile.full_name || ''}, hay un nuevo evento programado:\n\n*${title}*\n${message}\n\nRevisa la plataforma para más detalles.`;
-
-				await sendWhatsApp(phone, body).catch(err => console.error('Error enviando WhatsApp a', phone, err));
-			}
-		}
-
 	} catch (error) {
-		console.error('Error general en sendEventNotification:', error);
+		console.error('sendEventNotification: error resolviendo destinatarios:', error);
+		return { sent: 0, failed: 0 };
 	}
+
+	return notifyUsers(userIds, title, message, 'event');
+}
+
+/**
+ * Envía notificaciones por Email y WhatsApp a una lista concreta de
+ * participantes (usado por reuniones, donde los destinatarios ya están
+ * resueltos de antemano y no dependen de school_id/group_id).
+ */
+export async function sendMeetingNotification(title: string, message: string, userIds: string[]): Promise<NotifyResult> {
+	return notifyUsers(userIds, title, message, 'meeting');
 }
