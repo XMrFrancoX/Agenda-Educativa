@@ -136,14 +136,28 @@
 					<div class="detail-content">
 						<span class="detail-label">Visibilidad</span>
 						<span class="detail-value">
-							{event.visibility === 'school' ? 'Toda la institución' : 'Solo yo'}
+							{#if event.visibility === 'school'}
+								Toda la institución
+							{:else if event.visibility === 'group'}
+								Grupo de Staff
+							{:else if event.visibility === 'course'}
+								Curso de alumnos
+							{:else}
+								Solo yo
+							{/if}
 						</span>
 					</div>
 				</div>
 			</div>
 
-			<!-- Actions (only for event owner) -->
-			{#if isOwner}
+			<!-- Reunión vinculada: se gestiona desde Reuniones, no acá -->
+			{#if event.meeting_id}
+				<div class="detail-actions">
+					<a class="btn btn-ghost" href="/reuniones">
+						Gestionar en Reuniones
+					</a>
+				</div>
+			{:else if isOwner}
 				<div class="detail-actions">
 					<button
 						class="btn btn-ghost"

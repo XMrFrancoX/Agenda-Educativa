@@ -16,11 +16,9 @@
 	let editingEvent = $state<Record<string, any> | null>(null);
 	let selectedDateRange = $state<{start: string, end: string, allDay: boolean} | null>(null);
 	let showTeacher = $state(false);
-	
+
 	$effect(() => {
-		if (data.preferences?.show_teacher_events !== undefined && !showTeacher) {
-			showTeacher = data.preferences.show_teacher_events;
-		}
+		showTeacher = data.preferences?.show_teacher_events ?? false;
 	});
 	let togglingTeacher = $state(false);
 	let currentView = $state('timeGridWeek');
@@ -183,9 +181,10 @@
 			{#if isDirector}
 				<div class="teacher-toggle-wrapper" class:loading={togglingTeacher}>
 					<label class="toggle-wrapper" for="toggle-teacher">
-						<div class="toggle" id="toggle-teacher">
+						<div class="toggle">
 							<input
 								type="checkbox"
+								id="toggle-teacher"
 								checked={showTeacher}
 								onchange={(e) => handleToggleTeacher((e.target as HTMLInputElement).checked)}
 								disabled={togglingTeacher}
@@ -240,6 +239,7 @@
 	event={editingEvent}
 	categories={data.categories}
 	groups={data.groups}
+	courses={data.courses}
 	userRole={data.profile?.role ?? 'teacher'}
 	schoolId={data.profile?.school_id ?? ''}
 	initialDateRange={selectedDateRange}

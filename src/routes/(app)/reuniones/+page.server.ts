@@ -3,6 +3,21 @@ import { fail, redirect } from '@sveltejs/kit';
 import { createSupabaseAdminClient } from '$lib/supabase.server';
 import { sendMeetingNotification } from '$lib/server/notifications';
 
+// `date` llega como datetime-local ("YYYY-MM-DDTHH:mm") sin zona horaria. Se
+// calcula el fin aproximado con aritmética UTC pura (sin involucrar la zona
+// horaria del servidor) y se devuelve en el mismo formato naive, para
+// insertarlo en calendar_events.ends_at igual que se guarda starts_at.
+function computeEndLocalString(date: string, durationMin: number): string | null {
+	if (!date.includes('T')) return null;
+	const [datePart, timePart] = date.split('T');
+	const [year, month, day] = datePart.split('-').map(Number);
+	const [hour, minute] = timePart.slice(0, 5).split(':').map(Number);
+	const startUTC = Date.UTC(year, month - 1, day, hour, minute);
+	const end = new Date(startUTC + durationMin * 60000);
+	const pad = (n: number) => String(n).padStart(2, '0');
+	return `${end.getUTCFullYear()}-${pad(end.getUTCMonth() + 1)}-${pad(end.getUTCDate())}T${pad(end.getUTCHours())}:${pad(end.getUTCMinutes())}`;
+}
+
 export const load: PageServerLoad = async ({ locals: { supabase, profile } }) => {
 	if (!profile?.id) throw redirect(303, '/login');
 
@@ -88,6 +103,28 @@ export const actions: Actions = {
 				}))
 			);
 		}
+
+		// Reflejar la reunión en el Calendario para que los participantes la vean ahí
+		const { data: meetingCategory } = await adminClient
+			.from('event_categories')
+			.select('id')
+			.eq('name', 'Reunión General')
+			.limit(1)
+			.maybeSingle();
+
+		await adminClient.from('calendar_events').insert({
+			title,
+			description: description || null,
+			starts_at: date,
+			ends_at: computeEndLocalString(date, duration),
+			all_day: false,
+			location: location || null,
+			category_id: meetingCategory?.id ?? null,
+			visibility: 'private',
+			school_id: profile.school_id,
+			created_by: profile.id,
+			meeting_id: meeting.id
+		});
 
 		// Notificar a todos los participantes (incluye al creador si se agregó como participante)
 		if (allParticipants.length > 0) {
@@ -184,6 +221,20 @@ export const actions: Actions = {
 			console.error('updateMeeting error:', error);
 			return fail(500, { error: 'No se pudo actualizar la reunión.' });
 		}
+
+		// Mantener sincronizado el evento reflejado en el Calendario
+		await adminClient
+			.from('calendar_events')
+			.update({
+				title,
+				description: description || null,
+				starts_at: date,
+				ends_at: computeEndLocalString(date, duration),
+				location: location || null,
+				updated_at: new Date().toISOString()
+			})
+			.eq('meeting_id', meetingId);
+
 		return { success: true };
 	},
 

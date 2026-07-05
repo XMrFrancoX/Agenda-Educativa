@@ -47,7 +47,8 @@ interface NotificationParams {
 	message: string;
 	schoolId: string;
 	groupId?: string | null;
-	visibility?: 'private' | 'group' | 'school';
+	courseId?: string | null;
+	visibility?: 'private' | 'group' | 'school' | 'course';
 }
 
 interface NotifyResult {
@@ -171,7 +172,7 @@ async function notifyUsers(userIds: string[], title: string, message: string, ki
  * Envía notificaciones por Email y WhatsApp a los destinatarios de un evento
  * de calendario, resueltos por escuela o por grupo según su visibilidad.
  */
-export async function sendEventNotification({ title, message, schoolId, groupId, visibility }: NotificationParams): Promise<NotifyResult> {
+export async function sendEventNotification({ title, message, schoolId, groupId, courseId, visibility }: NotificationParams): Promise<NotifyResult> {
 	let userIds: string[] = [];
 
 	try {
@@ -188,6 +189,13 @@ export async function sendEventNotification({ title, message, schoolId, groupId,
 				.select('user_id')
 				.eq('group_id', groupId);
 			if (error) console.error('sendEventNotification: error cargando miembros del grupo:', error.message);
+			userIds = members?.map(m => m.user_id) ?? [];
+		} else if (visibility === 'course' && courseId) {
+			const { data: members, error } = await adminClient
+				.from('course_members')
+				.select('user_id')
+				.eq('course_id', courseId);
+			if (error) console.error('sendEventNotification: error cargando miembros del curso:', error.message);
 			userIds = members?.map(m => m.user_id) ?? [];
 		} else {
 			return { sent: 0, failed: 0 };

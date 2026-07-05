@@ -9,6 +9,7 @@ export const load: PageServerLoad = async ({ locals: { supabase, profile } }) =>
 		.select(`
 			id, title, description, starts_at, ends_at, all_day,
 			location, visibility, category_id, created_by,
+			group_id, course_id, meeting_id,
 			event_categories ( id, name, color, icon ),
 			profiles!created_by ( id, full_name, role )
 		`)
@@ -35,6 +36,26 @@ export const load: PageServerLoad = async ({ locals: { supabase, profile } }) =>
 		.eq('school_id', profile?.school_id)
 		.order('name');
 
+	// Los docentes solo pueden targetear los cursos donde el director los asignó
+	// como profesor responsable (course_members); director/admin/superadmin ven todos.
+	let courses: { id: string; name: string }[] = [];
+	if (profile?.role === 'teacher') {
+		const { data: memberships } = await supabase
+			.from('course_members')
+			.select('courses ( id, name )')
+			.eq('user_id', profile.id);
+		courses = (memberships ?? [])
+			.map((m: any) => m.courses)
+			.filter((c: any): c is { id: string; name: string } => !!c);
+	} else {
+		const { data } = await supabase
+			.from('courses')
+			.select('id, name')
+			.eq('school_id', profile?.school_id)
+			.order('name');
+		courses = data ?? [];
+	}
+
 	return {
 		events: events ?? [],
 		preferences: preferences ?? {
@@ -46,6 +67,7 @@ export const load: PageServerLoad = async ({ locals: { supabase, profile } }) =>
 		},
 		categories: categories ?? [],
 		groups: groups ?? [],
+		courses: courses ?? [],
 		profile
 	};
 };
@@ -64,9 +86,23 @@ export const actions: Actions = {
 		const visibility = (formData.get('visibility') as string) || 'private';
 
 		const group_id = formData.get('group_id') as string;
+		const course_id = formData.get('course_id') as string;
 
 		if (!title || !starts_at) {
 			return fail(400, { error: 'El título y la fecha de inicio son requeridos.' });
+		}
+
+		// Un docente solo puede crear eventos de curso para cursos donde el
+		// director lo haya asignado como profesor responsable.
+		if (profile?.role === 'teacher' && visibility === 'course') {
+			if (!course_id) return fail(400, { error: 'Seleccioná un curso.' });
+			const { data: membership } = await supabase
+				.from('course_members')
+				.select('course_id')
+				.eq('course_id', course_id)
+				.eq('user_id', profile.id)
+				.maybeSingle();
+			if (!membership) return fail(403, { error: 'No sos profesor responsable de ese curso.' });
 		}
 
 		const { data: event, error } = await supabase
@@ -81,6 +117,7 @@ export const actions: Actions = {
 				category_id: category_id || null,
 				visibility,
 				group_id: visibility === 'group' && group_id ? group_id : null,
+				course_id: visibility === 'course' && course_id ? course_id : null,
 				school_id: profile?.school_id,
 				created_by: profile?.id
 			})
@@ -92,8 +129,8 @@ export const actions: Actions = {
 			return fail(500, { error: `No se pudo crear el evento: ${error.message} (Code: ${error.code})` });
 		}
 
-		// Disparar notificaciones en segundo plano si es para un grupo o toda la escuela
-		if ((visibility === 'group' || visibility === 'school') && profile?.school_id) {
+		// Disparar notificaciones en segundo plano si es para un grupo, un curso o toda la escuela
+		if ((visibility === 'group' || visibility === 'course' || visibility === 'school') && profile?.school_id) {
 			let dateStr = starts_at.split('T')[0]; // simple date formatting
 			if (!all_day && starts_at.includes('T')) {
 				const timeStr = starts_at.split('T')[1].slice(0, 5);
@@ -120,7 +157,8 @@ export const actions: Actions = {
 				message: `${description ? description + '\n\n' : ''}Fecha programada: ${dateStr}`,
 				schoolId: profile.school_id,
 				groupId: group_id,
-				visibility: visibility as 'group' | 'school'
+				courseId: course_id,
+				visibility: visibility as 'group' | 'course' | 'school'
 			});
 		}
 
@@ -138,9 +176,22 @@ export const actions: Actions = {
 		const location = formData.get('location') as string;
 		const category_id = formData.get('category_id') as string;
 		const visibility = formData.get('visibility') as string;
+		const group_id = formData.get('group_id') as string;
+		const course_id = formData.get('course_id') as string;
 
 		if (!id || !title || !starts_at) {
 			return fail(400, { error: 'Datos incompletos.' });
+		}
+
+		if (profile?.role === 'teacher' && visibility === 'course') {
+			if (!course_id) return fail(400, { error: 'Seleccioná un curso.' });
+			const { data: membership } = await supabase
+				.from('course_members')
+				.select('course_id')
+				.eq('course_id', course_id)
+				.eq('user_id', profile.id)
+				.maybeSingle();
+			if (!membership) return fail(403, { error: 'No sos profesor responsable de ese curso.' });
 		}
 
 		const { error } = await supabase
@@ -154,6 +205,8 @@ export const actions: Actions = {
 				location: location || null,
 				category_id: category_id || null,
 				visibility,
+				group_id: visibility === 'group' && group_id ? group_id : null,
+				course_id: visibility === 'course' && course_id ? course_id : null,
 				updated_at: new Date().toISOString()
 			})
 			.eq('id', id)
@@ -183,7 +236,7 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const show = formData.get('show_teacher_events') === 'true';
 
-		await supabase
+		const { error } = await supabase
 			.from('user_preferences')
 			.upsert({
 				user_id: profile?.id,
@@ -191,6 +244,7 @@ export const actions: Actions = {
 				updated_at: new Date().toISOString()
 			});
 
+		if (error) return fail(500, { error: 'No se pudo guardar la preferencia.' });
 		return { success: true };
 	},
 

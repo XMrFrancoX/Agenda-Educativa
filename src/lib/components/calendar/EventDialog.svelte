@@ -8,6 +8,7 @@
 		event = null,
 		categories = [],
 		groups = [],
+		courses = [],
 		userRole = 'teacher',
 		schoolId = '',
 		initialDateRange = null,
@@ -17,6 +18,7 @@
 		event?: Record<string, any> | null;
 		categories: Array<{ id: string; name: string; color: string; icon: string }>;
 		groups?: Array<{ id: string; name: string }>;
+		courses?: Array<{ id: string; name: string }>;
 		userRole: string;
 		schoolId: string;
 		initialDateRange?: { start: string; end: string; allDay: boolean } | null;
@@ -39,6 +41,7 @@
 	let categoryId = $state('');
 	let visibility = $state('private');
 	let groupId = $state('');
+	let courseId = $state('');
 
 	let showNewCat = $state(false);
 	let newCatName = $state('');
@@ -66,6 +69,8 @@
 					location = event.location ?? '';
 					categoryId = event.category_id ?? '';
 					visibility = event.visibility ?? 'private';
+					groupId = event.group_id ?? '';
+					courseId = event.course_id ?? '';
 				} else {
 					title = '';
 					description = '';
@@ -101,6 +106,8 @@
 					location = '';
 					categoryId = '';
 					visibility = 'private';
+					groupId = '';
+					courseId = '';
 				}
 				formError = '';
 			});
@@ -308,7 +315,7 @@
 					></textarea>
 				</div>
 
-				<!-- Visibility (only directors can set 'school' or 'group') -->
+				<!-- Visibility -->
 				{#if userRole === 'director' || userRole === 'admin' || userRole === 'superadmin'}
 					<div class="form-row">
 						<div class="form-group">
@@ -318,6 +325,9 @@
 								<option value="school">Toda la institución</option>
 								{#if groups && groups.length > 0}
 									<option value="group">Grupo de Staff</option>
+								{/if}
+								{#if courses && courses.length > 0}
+									<option value="course">Curso de alumnos</option>
 								{/if}
 							</select>
 						</div>
@@ -332,11 +342,52 @@
 								</select>
 							</div>
 						{/if}
+						{#if visibility === 'course'}
+							<div class="form-group">
+								<label class="input-label" for="event-course">Seleccionar Curso</label>
+								<select id="event-course" name="course_id" class="input" bind:value={courseId} required>
+									<option value="">Seleccionar...</option>
+									{#each courses as c}
+										<option value={c.id}>{c.name}</option>
+									{/each}
+								</select>
+							</div>
+						{/if}
 					</div>
-					{#if (!groups || groups.length === 0) && (userRole === 'director' || userRole === 'admin' || userRole === 'superadmin')}
+					{#if (!groups || groups.length === 0) && (!courses || courses.length === 0)}
 						<p class="hint-text">
-							💡 Para usar visibilidad por grupo, primero creá grupos en la sección
-							<a href="/staff" class="link-inline">Staff</a>.
+							💡 Para usar visibilidad por grupo o curso, primero creá grupos en la sección
+							<a href="/staff" class="link-inline">Staff</a> o cursos en
+							<a href="/alumnos" class="link-inline">Alumnos y Tutores</a>.
+						</p>
+					{/if}
+				{:else if userRole === 'teacher'}
+					<div class="form-row">
+						<div class="form-group">
+							<label class="input-label" for="event-visibility">Visibilidad</label>
+							<select id="event-visibility" name="visibility" class="input" bind:value={visibility}>
+								<option value="private">Solo yo</option>
+								{#if courses && courses.length > 0}
+									<option value="course">Curso de alumnos</option>
+								{/if}
+							</select>
+						</div>
+						{#if visibility === 'course'}
+							<div class="form-group">
+								<label class="input-label" for="event-course">Seleccionar Curso</label>
+								<select id="event-course" name="course_id" class="input" bind:value={courseId} required>
+									<option value="">Seleccionar...</option>
+									{#each courses as c}
+										<option value={c.id}>{c.name}</option>
+									{/each}
+								</select>
+							</div>
+						{/if}
+					</div>
+					{#if !courses || courses.length === 0}
+						<p class="hint-text">
+							💡 Para notificar a un curso de alumnos, pedile a un director que cree uno en
+							<a href="/alumnos" class="link-inline">Alumnos y Tutores</a>.
 						</p>
 					{/if}
 				{:else}
