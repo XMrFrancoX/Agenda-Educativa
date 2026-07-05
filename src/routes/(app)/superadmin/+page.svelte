@@ -2,7 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import type { PageData } from './$types';
-	import { Building, Users, AlertCircle, Save, Plus } from 'lucide-svelte';
+	import { Building, Users, AlertCircle, Save, Plus, Search } from 'lucide-svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -140,8 +140,9 @@
 				</div>
 			</form>
 
-			<div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
-				<input type="text" class="input" placeholder="🔍 Buscar escuela..." bind:value={searchSchool} style="flex:1;" />
+			<div class="input-wrapper" style="margin-bottom:1rem;">
+				<Search size="16" class="input-icon" />
+				<input type="text" class="input has-icon" placeholder="Buscar escuela..." bind:value={searchSchool} style="width:100%;" />
 			</div>
 
 			<div class="schools-list">
@@ -311,7 +312,10 @@
 			<h2 class="section-title">
 				<Users size="18" /> Usuarios Asignados
 			</h2>
-			<input type="text" class="input" placeholder="🔍 Buscar por nombre o email..." bind:value={searchUser} style="margin-bottom:1rem; width:100%;" />
+			<div class="input-wrapper" style="margin-bottom:1rem;">
+				<Search size="16" class="input-icon" />
+				<input type="text" class="input has-icon" placeholder="Buscar por nombre o email..." bind:value={searchUser} style="width:100%;" />
+			</div>
 			<div class="users-grid">
 				{#each assignedUsers as user}
 					<div class="user-row">
@@ -378,6 +382,17 @@
 		align-items: start;
 	}
 	@media (max-width: 1024px) { .admin-layout { grid-template-columns: 1fr; } }
+
+	.input-wrapper { position: relative; }
+	.input-wrapper :global(.input-icon) {
+		position: absolute;
+		left: 0.75rem;
+		top: 50%;
+		transform: translateY(-50%);
+		color: var(--text-muted);
+		pointer-events: none;
+	}
+	.input.has-icon { padding-left: 2.5rem; }
 
 	.section-title {
 		display: flex;

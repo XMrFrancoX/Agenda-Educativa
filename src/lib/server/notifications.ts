@@ -70,7 +70,7 @@ async function notifyUsers(userIds: string[], title: string, message: string, ki
 
 	const { data: profiles, error: profilesError } = await adminClient
 		.from('profiles')
-		.select('id, full_name, phone')
+		.select('id, full_name, phone, schools ( whatsapp_enabled )')
 		.in('id', userIds);
 
 	if (profilesError) {
@@ -145,8 +145,10 @@ async function notifyUsers(userIds: string[], title: string, message: string, ki
 			console.warn(`notifyUsers: usuario ${profile.id} no tiene email en auth.users, se omite.`);
 		}
 
-		// 2. Enviar WhatsApp (usando fetch nativo, compatible con Cloudflare)
-		if (userPrefs.notify_whatsapp && profile.phone && env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && env.TWILIO_WHATSAPP_FROM) {
+		// 2. Enviar WhatsApp (usando fetch nativo, compatible con Cloudflare) — solo si
+		// la escuela tiene el servicio premium de WhatsApp habilitado (ver superadmin).
+		const schoolWhatsappEnabled = !!(profile as any).schools?.whatsapp_enabled;
+		if (schoolWhatsappEnabled && userPrefs.notify_whatsapp && profile.phone && env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && env.TWILIO_WHATSAPP_FROM) {
 			let phoneStr = profile.phone.replace(/\D/g, '');
 
 			if (!phoneStr.startsWith('549')) {

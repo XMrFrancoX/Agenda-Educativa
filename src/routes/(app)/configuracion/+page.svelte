@@ -72,28 +72,30 @@
 						{roleLabel[data.profile?.role ?? 'teacher']}
 					</span>
 
-					<div style="margin-top: 1.5rem;">
-						<p class="settings-item-title" style="margin-bottom: 0.25rem;">Teléfono de Contacto (WhatsApp)</p>
-						<p class="settings-item-desc" style="margin-bottom: 0.75rem;">Para números de Argentina, incluir prefijo +549 (Ej: +5491112345678)</p>
-						<form method="POST" action="?/updatePhone" style="display:flex;gap:0.5rem;align-items:center;" use:enhance={() => {
-							saving = true;
-							return async ({ result, update }) => {
-								saving = false;
-								if (result.type === 'success') {
-									await invalidateAll();
-									saved = true;
-									setTimeout(() => (saved = false), 3000);
-								} else {
-									await update();
-								}
-							};
-						}}>
-							<input type="text" name="phone" class="input" placeholder="+54911..." value={data.profile?.phone || ''} style="max-width: 250px;" />
-							<button type="submit" class="btn btn-primary" disabled={saving}>
-								{saving ? 'Guardando...' : 'Guardar'}
-							</button>
-						</form>
-					</div>
+					{#if data.profile?.school_whatsapp_enabled}
+						<div style="margin-top: 1.5rem;">
+							<p class="settings-item-title" style="margin-bottom: 0.25rem;">Teléfono de Contacto (WhatsApp)</p>
+							<p class="settings-item-desc" style="margin-bottom: 0.75rem;">Para números de Argentina, incluir prefijo +549 (Ej: +5491112345678)</p>
+							<form method="POST" action="?/updatePhone" style="display:flex;gap:0.5rem;align-items:center;" use:enhance={() => {
+								saving = true;
+								return async ({ result, update }) => {
+									saving = false;
+									if (result.type === 'success') {
+										await invalidateAll();
+										saved = true;
+										setTimeout(() => (saved = false), 3000);
+									} else {
+										await update();
+									}
+								};
+							}}>
+								<input type="text" name="phone" class="input" placeholder="+54911..." value={data.profile?.phone || ''} style="max-width: 250px;" />
+								<button type="submit" class="btn btn-primary" disabled={saving}>
+									{saving ? 'Guardando...' : 'Guardar'}
+								</button>
+							</form>
+						</div>
+					{/if}
 				</div>
 			</div>
 		</div>
@@ -121,19 +123,21 @@
 				</label>
 			</div>
 
-			<div class="settings-item">
-				<div>
-					<p class="settings-item-title">Notificaciones por WhatsApp</p>
-					<p class="settings-item-desc">Recibir alertas de eventos vía WhatsApp</p>
-				</div>
-				<label class="toggle-wrapper">
-					<div class="toggle">
-						<input type="checkbox" bind:checked={prefs.notify_whatsapp} onchange={savePreferences} />
-						<div class="toggle-track"></div>
-						<div class="toggle-thumb"></div>
+			{#if data.profile?.school_whatsapp_enabled}
+				<div class="settings-item">
+					<div>
+						<p class="settings-item-title">Notificaciones por WhatsApp</p>
+						<p class="settings-item-desc">Recibir alertas de eventos vía WhatsApp</p>
 					</div>
-				</label>
-			</div>
+					<label class="toggle-wrapper">
+						<div class="toggle">
+							<input type="checkbox" bind:checked={prefs.notify_whatsapp} onchange={savePreferences} />
+							<div class="toggle-track"></div>
+							<div class="toggle-thumb"></div>
+						</div>
+					</label>
+				</div>
+			{/if}
 
 			<div class="divider"></div>
 

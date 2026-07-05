@@ -19,6 +19,7 @@ declare global {
 				school_logo_url?: string | null;
 				school_status?: string;
 				school_primary_color?: string | null;
+				school_whatsapp_enabled?: boolean;
 			} | null;
 			tenant: {
 				id: string;

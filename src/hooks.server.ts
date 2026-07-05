@@ -61,16 +61,17 @@ export const handle: Handle = async ({ event, resolve }) => {
 	if (user) {
 		const { data: profile } = await event.locals.supabase
 			.from('profiles')
-			.select('id, full_name, role, school_id, phone, avatar_url, schools(logo_url, status, primary_color)')
+			.select('id, full_name, role, school_id, phone, avatar_url, schools(logo_url, status, primary_color, whatsapp_enabled)')
 			.eq('id', user.id)
 			.single();
-		
+
 		if (profile) {
 			event.locals.profile = {
 				...profile,
 				school_logo_url: profile.schools?.logo_url ?? null,
 				school_status: profile.schools?.status ?? 'active',
-				school_primary_color: profile.schools?.primary_color ?? null
+				school_primary_color: profile.schools?.primary_color ?? null,
+				school_whatsapp_enabled: profile.schools?.whatsapp_enabled ?? false
 			};
 		} else {
 			event.locals.profile = null;
