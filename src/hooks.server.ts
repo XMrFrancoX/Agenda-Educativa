@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from '$lib/supabase';
+import { dev } from '$app/environment';
 import { type Handle, redirect } from '@sveltejs/kit';
 
 // Routes that don't require authentication
@@ -10,7 +11,12 @@ export const handle: Handle = async ({ event, resolve }) => {
 		() => event.cookies.getAll(),
 		(cookies) => {
 			cookies.forEach(({ name, value, options }) => {
-				event.cookies.set(name, value, { path: '/', ...options });
+				// @supabase/ssr fuerza `secure: true` por defecto. En dev (ej. probando
+				// desde el celular vía IP de red local sobre http, no https) el navegador
+				// descarta silenciosamente esa cookie porque el origen no es un contexto
+				// seguro (a diferencia de "localhost", que sí lo es) — eso rompe el login.
+				// En producción (detrás de https) se respeta el `secure: true` normal.
+				event.cookies.set(name, value, { path: '/', ...options, secure: dev ? false : options.secure });
 			});
 		}
 	);

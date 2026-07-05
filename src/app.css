@@ -139,6 +139,7 @@ a:hover { color: var(--color-secondary); }
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   padding: 1.5rem;
+  min-width: 0;
   transition: border-color var(--transition-base), box-shadow var(--transition-base);
 }
 .card:hover {
@@ -453,6 +454,7 @@ select.input option { background: var(--bg-elevated); }
 }
 .main-content {
   flex: 1;
+  min-width: 0;
   margin-left: var(--sidebar-width);
   display: flex;
   flex-direction: column;
@@ -594,10 +596,26 @@ select.input option { background: var(--bg-elevated); }
 
 /* ─── Responsive ─── */
 @media (max-width: 768px) {
-  :root { --sidebar-width: 0px; }
-  .main-content { margin-left: 0; }
+  /* El sidebar pasa a ser un drawer superpuesto (ver Sidebar.svelte), ya no
+     reserva espacio en el layout; en cambio se deja lugar para la barra
+     superior fija con el botón de menú. */
+  .main-content { margin-left: 0; padding-top: var(--mobile-topbar-height, 56px); }
   .form-row { grid-template-columns: 1fr; }
   .page-body { padding: 1rem; }
+  .page-header { padding: 1rem 1rem 0; padding-bottom: 1rem; }
   .kanban-board { flex-direction: column; }
   .kanban-column { flex: none; width: 100%; }
+
+  /* FullCalendar: evitar que los 3 grupos del toolbar se amontonen */
+  .fc .fc-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+  .fc .fc-toolbar-chunk {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+  }
 }

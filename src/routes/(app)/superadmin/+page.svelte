@@ -448,7 +448,8 @@
 	.school-actions {
 		display: flex;
 		align-items: center;
-		gap: 0.25rem;
+		flex-wrap: wrap;
+		gap: 0.5rem;
 	}
 	.school-name { display:block; font-weight: 500; font-size: 0.875rem; color: var(--text-primary); }
 	

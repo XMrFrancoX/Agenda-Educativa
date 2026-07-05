@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
+	import { Menu, X } from 'lucide-svelte';
 	import type { Snippet } from 'svelte';
 
 	let { profile } = $props<{
@@ -106,9 +107,68 @@
 	const currentPath = $derived($page.url.pathname);
 	const userRole = $derived(profile?.role ?? 'teacher');
 	const visibleNav = $derived(navItems.filter((item) => item.roles.includes(userRole)));
+
+	let mobileOpen = $state(false);
+
+	// Cerrar el drawer automáticamente al navegar
+	$effect(() => {
+		currentPath;
+		mobileOpen = false;
+	});
+
+	// Bloquear el scroll de fondo mientras el drawer está abierto
+	$effect(() => {
+		if (typeof document === 'undefined') return;
+		document.body.style.overflow = mobileOpen ? 'hidden' : '';
+		return () => {
+			document.body.style.overflow = '';
+		};
+	});
+
+	function handleKeydown(e: KeyboardEvent) {
+		if (e.key === 'Escape') mobileOpen = false;
+	}
 </script>
 
-<aside class="sidebar">
+<svelte:window onkeydown={handleKeydown} />
+
+<!-- Mobile top bar -->
+<div class="mobile-topbar">
+	<button
+		type="button"
+		class="mobile-menu-btn"
+		onclick={() => (mobileOpen = !mobileOpen)}
+		aria-label={mobileOpen ? 'Cerrar menú' : 'Abrir menú'}
+		aria-expanded={mobileOpen}
+	>
+		{#if mobileOpen}
+			<X size="20" />
+		{:else}
+			<Menu size="20" />
+		{/if}
+	</button>
+	<div class="mobile-brand">
+		{#if profile && profile.school_logo_url}
+			<img src={profile.school_logo_url} alt="Logo" class="mobile-brand-logo" />
+		{:else}
+			<svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+				<rect width="32" height="32" rx="9" fill="#6366f1"/>
+				<path d="M8 12h16M8 16h10M8 20h13" stroke="white" stroke-width="2" stroke-linecap="round"/>
+				<circle cx="24" cy="10" r="4" fill="#8b5cf6"/>
+			</svg>
+		{/if}
+		<span class="mobile-brand-name">Agenda Educativa</span>
+	</div>
+</div>
+
+<!-- Backdrop (solo mobile, cuando el drawer está abierto) -->
+{#if mobileOpen}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="sidebar-backdrop" role="presentation" onclick={() => (mobileOpen = false)}></div>
+{/if}
+
+<aside class="sidebar" class:mobile-open={mobileOpen}>
 	<!-- Brand -->
 	<div class="sidebar-brand">
 		<div class="brand-logo">
@@ -353,5 +413,77 @@
 	.logout-btn:hover {
 		background: rgba(239, 68, 68, 0.1);
 		color: #fca5a5;
+	}
+
+	/* Mobile top bar + drawer */
+	.mobile-topbar {
+		display: none;
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: var(--mobile-topbar-height, 56px);
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0 1rem;
+		background: var(--bg-surface);
+		border-bottom: 1px solid var(--border-subtle);
+		z-index: 45;
+	}
+	.mobile-menu-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 40px;
+		height: 40px;
+		border-radius: var(--radius-md);
+		background: none;
+		border: none;
+		color: var(--text-primary);
+		cursor: pointer;
+		flex-shrink: 0;
+	}
+	.mobile-menu-btn:hover { background: var(--bg-elevated); }
+	.mobile-brand {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		min-width: 0;
+	}
+	.mobile-brand-logo {
+		width: 22px;
+		height: 22px;
+		object-fit: contain;
+		border-radius: 5px;
+		flex-shrink: 0;
+	}
+	.mobile-brand-name {
+		font-family: 'Plus Jakarta Sans', sans-serif;
+		font-weight: 800;
+		font-size: 0.9375rem;
+		color: var(--text-primary);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.sidebar-backdrop {
+		display: none;
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.55);
+		z-index: 55;
+	}
+
+	@media (max-width: 768px) {
+		.mobile-topbar { display: flex; }
+		.sidebar-backdrop { display: block; }
+		.sidebar {
+			transform: translateX(-100%);
+			transition: transform var(--transition-base);
+			z-index: 60;
+			box-shadow: var(--shadow-lg);
+		}
+		.sidebar.mobile-open { transform: translateX(0); }
 	}
 </style>

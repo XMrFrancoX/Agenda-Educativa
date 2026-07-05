@@ -483,7 +483,7 @@
 
 	/* Upcoming cards */
 	.meetings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; }
-	.meeting-card { background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 1.25rem; transition: box-shadow var(--transition-base), border-color var(--transition-base); }
+	.meeting-card { background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 1.25rem; min-width: 0; transition: box-shadow var(--transition-base), border-color var(--transition-base); }
 	.meeting-card.upcoming { border-left: 3px solid var(--color-primary); }
 	.meeting-card:hover { box-shadow: var(--shadow-md); border-color: var(--border-default); }
 
@@ -491,8 +491,8 @@
 	.meeting-date-badge { display: flex; flex-direction: column; align-items: center; background: rgba(99,102,241,0.15); border-radius: var(--radius-md); padding: 0.4rem 0.6rem; min-width: 44px; flex-shrink: 0; }
 	.meeting-day { font-size: 1.25rem; font-weight: 800; color: var(--color-primary); line-height: 1; }
 	.meeting-month { font-size: 0.65rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; }
-	.meeting-info { flex: 1; }
-	.meeting-title { font-size: 0.9375rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.25rem; }
+	.meeting-info { flex: 1; min-width: 0; }
+	.meeting-title { font-size: 0.9375rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.25rem; overflow-wrap: break-word; }
 	.meeting-meta { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.75rem; color: var(--text-muted); }
 	.meeting-meta span { display: flex; align-items: center; gap: 0.25rem; }
 	.meeting-actions-top { display: flex; gap: 0.25rem; flex-shrink: 0; }
