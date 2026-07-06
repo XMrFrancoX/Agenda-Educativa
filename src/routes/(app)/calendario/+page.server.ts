@@ -9,7 +9,9 @@ const TASK_PRIORITY_COLOR: Record<string, string> = {
 };
 
 export const load: PageServerLoad = async ({ locals: { supabase, profile } }) => {
-	// Load events — RLS handles visibility automatically based on role
+	// Load events — RLS handles visibility automatically based on role.
+	// school_id se filtra explícitamente para que, al cambiar de colegio,
+	// no aparezcan eventos privados/propios creados en un colegio anterior.
 	const { data: events, error } = await supabase
 		.from('calendar_events')
 		.select(`
@@ -19,6 +21,7 @@ export const load: PageServerLoad = async ({ locals: { supabase, profile } }) =>
 			event_categories ( id, name, color, icon ),
 			profiles!created_by ( id, full_name, role )
 		`)
+		.eq('school_id', profile?.school_id)
 		.order('starts_at', { ascending: true });
 
 	if (error) console.error('Calendar load error:', error.message);
