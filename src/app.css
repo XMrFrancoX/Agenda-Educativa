@@ -2,51 +2,81 @@
 
 @import "tailwindcss";
 
+/* Puente entre los tokens del design system propio (abajo) y las clases
+   utilitarias que esperan los componentes shadcn-svelte (ui/alert, etc.).
+   Debe ir antes del bloque :root real para que ese sea el que gane la
+   cascada — así los componentes shadcn heredan tema claro/oscuro y color
+   institucional automáticamente en vez de tener su propia paleta fija. */
+@theme {
+	--color-background: var(--bg-base);
+	--color-foreground: var(--text-primary);
+	--color-card: var(--bg-elevated);
+	--color-card-foreground: var(--text-primary);
+	--color-popover: var(--bg-elevated);
+	--color-popover-foreground: var(--text-primary);
+	--color-muted: var(--bg-overlay);
+	--color-muted-foreground: var(--text-secondary);
+	--color-primary: var(--color-primary);
+	--color-primary-foreground: var(--text-on-primary);
+	--color-destructive: var(--color-danger);
+	--color-success: var(--color-success);
+	--color-border: var(--border-default);
+	--color-input: var(--border-default);
+	--color-ring: var(--color-primary);
+}
+
 /* Cache bust: v2 for modal fixes */
 
 /* ═══════════════════════════════════════════════════════
    DESIGN SYSTEM — Agenda Educativa
+   Tema claro por defecto, oscuro vía [data-theme="dark"].
+   Los valores de color usan light-dark(claro, oscuro) y
+   resuelven según la propiedad color-scheme de abajo.
    ═══════════════════════════════════════════════════════ */
+
+:root[data-theme='light'] { color-scheme: light; }
+:root[data-theme='dark']  { color-scheme: dark; }
 
 :root {
   /* Brand Colors */
-  --color-primary:        #6366f1; /* Indigo 500 */
-  --color-primary-hover:  #4f46e5; /* Indigo 600 */
-  --color-primary-light:  #e0e7ff; /* Indigo 100 */
-  --color-secondary:      #8b5cf6; /* Violet 500 */
-  --color-accent:         #06b6d4; /* Cyan 500 */
-  --color-success:        #10b981; /* Emerald 500 */
-  --color-warning:        #f59e0b; /* Amber 500 */
-  --color-danger:         #ef4444; /* Red 500 */
+  --color-primary:           light-dark(#2563eb, #3b82f6); /* Blue 600 / 500 */
+  --color-primary-hover:     light-dark(#1d4ed8, #2563eb); /* Blue 700 / 600 */
+  --color-primary-light:     light-dark(#1d4ed8, #93c5fd); /* texto sobre fondo primario tenue */
+  --color-primary-alpha-12:  light-dark(rgba(37,99,235,0.12), rgba(59,130,246,0.16));
+  --color-secondary:         light-dark(#7c3aed, #8b5cf6); /* Violet */
+  --color-accent:            light-dark(#0891b2, #06b6d4); /* Cyan */
+  --color-success:           light-dark(#059669, #10b981); /* Emerald */
+  --color-warning:           light-dark(#b45309, #f59e0b); /* Amber */
+  --color-danger:            light-dark(#dc2626, #ef4444); /* Red */
 
-  /* Dark Mode Surfaces */
-  --bg-base:          #0f0f17;
-  --bg-surface:       #16161f;
-  --bg-elevated:      #1e1e2e;
-  --bg-overlay:       #252538;
-  --bg-highlight:     #2e2e45;
+  /* Surfaces */
+  --bg-base:          light-dark(#f8fafc, #0b1220);
+  --bg-surface:       light-dark(#ffffff, #0f172a);
+  --bg-elevated:      light-dark(#ffffff, #111827);
+  --bg-overlay:       light-dark(#f1f5f9, #1e293b);
+  --bg-highlight:     light-dark(#e2e8f0, #263449);
 
   /* Text */
-  --text-primary:     #e2e8f0;
-  --text-secondary:   #94a3b8;
-  --text-muted:       #64748b;
+  --text-primary:     light-dark(#0f172a, #e2e8f0);
+  --text-secondary:   light-dark(#475569, #94a3b8);
+  --text-muted:       light-dark(#94a3b8, #64748b);
   --text-on-primary:  #ffffff;
 
   /* Borders */
-  --border-subtle:    rgba(255, 255, 255, 0.06);
-  --border-default:   rgba(255, 255, 255, 0.10);
-  --border-strong:    rgba(255, 255, 255, 0.18);
+  --border-subtle:    light-dark(rgba(15, 23, 42, 0.08), rgba(255, 255, 255, 0.06));
+  --border-default:   light-dark(rgba(15, 23, 42, 0.12), rgba(255, 255, 255, 0.10));
+  --border-strong:    light-dark(rgba(15, 23, 42, 0.24), rgba(255, 255, 255, 0.18));
 
   /* Glassmorphism */
-  --glass-bg:         rgba(30, 30, 46, 0.7);
-  --glass-border:     rgba(255, 255, 255, 0.08);
+  --glass-bg:         light-dark(rgba(255, 255, 255, 0.75), rgba(30, 30, 46, 0.7));
+  --glass-border:     light-dark(rgba(15, 23, 42, 0.08), rgba(255, 255, 255, 0.08));
   --glass-blur:       blur(16px);
 
   /* Shadows */
-  --shadow-sm:   0 1px 3px rgba(0,0,0,0.4);
-  --shadow-md:   0 4px 16px rgba(0,0,0,0.5);
-  --shadow-lg:   0 8px 32px rgba(0,0,0,0.6);
-  --shadow-glow: 0 0 24px rgba(99, 102, 241, 0.25);
+  --shadow-sm:   light-dark(0 1px 3px rgba(15,23,42,0.08),  0 1px 3px rgba(0,0,0,0.4));
+  --shadow-md:   light-dark(0 4px 16px rgba(15,23,42,0.10), 0 4px 16px rgba(0,0,0,0.5));
+  --shadow-lg:   light-dark(0 8px 32px rgba(15,23,42,0.14), 0 8px 32px rgba(0,0,0,0.6));
+  --shadow-glow: light-dark(0 0 20px rgba(37,99,235,0.18),  0 0 24px rgba(59,130,246,0.28));
 
   /* Sidebar */
   --sidebar-width: 260px;
@@ -64,24 +94,31 @@
   --transition-slow:   400ms cubic-bezier(0.4, 0, 0.2, 1);
 
   /* Role Colors */
-  --role-director: #8b5cf6;
-  --role-teacher:  #06b6d4;
-  --role-admin:    #f59e0b;
+  --role-director: light-dark(#7c3aed, #8b5cf6);
+  --role-teacher:  light-dark(#0e7490, #06b6d4);
+  --role-admin:    light-dark(#b45309, #f59e0b);
+  --role-student:  light-dark(#059669, #10b981);
+  --role-tutor:    light-dark(#be185d, #ec4899);
 
   /* Event Category Colors */
-  --cat-meeting:   #8b5cf6;
-  --cat-task:      #10b981;
-  --cat-event:     #f59e0b;
-  --cat-holiday:   #ef4444;
-  --cat-training:  #06b6d4;
-  --cat-admin:     #6b7280;
+  --cat-meeting:   light-dark(#7c3aed, #8b5cf6);
+  --cat-task:      light-dark(#059669, #10b981);
+  --cat-event:     light-dark(#b45309, #f59e0b);
+  --cat-holiday:   light-dark(#dc2626, #ef4444);
+  --cat-training:  light-dark(#0891b2, #06b6d4);
+  --cat-admin:     light-dark(#4b5563, #6b7280);
 }
 
-/* ─── Base Reset ─── */
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/* ─── Base Reset ───
+   En @layer base para que las utilidades de Tailwind (@layer utilities)
+   sigan pudiendo pisarlo — sin capa, este reset gana siempre sin importar
+   especificidad, y anulaba el padding/margin de los componentes shadcn. */
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
 }
 
 html {
@@ -211,7 +248,7 @@ a:hover { color: var(--color-secondary); }
 .input::placeholder { color: var(--text-muted); }
 .input:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  box-shadow: 0 0 0 3px light-dark(rgba(37,99,235,0.15), rgba(59,130,246,0.18));
 }
 
 .input-label {
@@ -244,17 +281,20 @@ select.input option { background: var(--bg-elevated); }
   font-weight: 600;
   letter-spacing: 0.02em;
 }
-.badge-primary   { background: rgba(99,102,241,0.15);  color: #a5b4fc; }
-.badge-success   { background: rgba(16,185,129,0.15);  color: #6ee7b7; }
-.badge-warning   { background: rgba(245,158,11,0.15);  color: #fcd34d; }
-.badge-danger    { background: rgba(239,68,68,0.15);   color: #fca5a5; }
-.badge-secondary { background: rgba(139,92,246,0.15);  color: #c4b5fd; }
-.badge-muted     { background: rgba(100,116,139,0.15); color: #94a3b8; }
+.badge-primary   { background: var(--color-primary-alpha-12); color: var(--color-primary-light); }
+.badge-success   { background: light-dark(rgba(5,150,105,0.12),  rgba(16,185,129,0.15)); color: light-dark(#047857, #6ee7b7); }
+.badge-warning   { background: light-dark(rgba(180,83,9,0.12),   rgba(245,158,11,0.15)); color: light-dark(#b45309, #fcd34d); }
+.badge-danger    { background: light-dark(rgba(220,38,38,0.12),  rgba(239,68,68,0.15));  color: light-dark(#b91c1c, #fca5a5); }
+.badge-secondary { background: light-dark(rgba(124,58,237,0.12), rgba(139,92,246,0.15)); color: light-dark(#6d28d9, #c4b5fd); }
+.badge-muted     { background: light-dark(rgba(71,85,105,0.10),  rgba(100,116,139,0.15)); color: var(--text-secondary); }
 
 /* ─── Role Badges ─── */
-.role-director { background: rgba(139,92,246,0.15);  color: #c4b5fd; border: 1px solid rgba(139,92,246,0.3); }
-.role-teacher  { background: rgba(6,182,212,0.15);   color: #67e8f9; border: 1px solid rgba(6,182,212,0.3); }
-.role-admin    { background: rgba(245,158,11,0.15);  color: #fcd34d; border: 1px solid rgba(245,158,11,0.3); }
+.role-director   { background: light-dark(rgba(124,58,237,.12), rgba(139,92,246,.15)); color: light-dark(#6d28d9, #c4b5fd); border: 1px solid light-dark(rgba(124,58,237,.22), rgba(139,92,246,.3)); }
+.role-teacher    { background: light-dark(rgba(8,145,178,.12),  rgba(6,182,212,.15));  color: light-dark(#0e7490, #67e8f9); border: 1px solid light-dark(rgba(8,145,178,.22), rgba(6,182,212,.3)); }
+.role-admin      { background: light-dark(rgba(180,83,9,.12),   rgba(245,158,11,.15)); color: light-dark(#b45309, #fcd34d); border: 1px solid light-dark(rgba(180,83,9,.22), rgba(245,158,11,.3)); }
+.role-superadmin { background: light-dark(rgba(194,65,12,.12),  rgba(234,88,12,.15));  color: light-dark(#c2410c, #fdba74); border: 1px solid light-dark(rgba(194,65,12,.22), rgba(234,88,12,.3)); }
+.role-student    { background: light-dark(rgba(5,150,105,.12),  rgba(16,185,129,.15)); color: light-dark(#047857, #6ee7b7); border: 1px solid light-dark(rgba(5,150,105,.22), rgba(16,185,129,.3)); }
+.role-tutor      { background: light-dark(rgba(190,24,93,.12),  rgba(236,72,153,.15)); color: light-dark(#be185d, #f9a8d4); border: 1px solid light-dark(rgba(190,24,93,.22), rgba(236,72,153,.3)); }
 
 /* ─── Divider ─── */
 .divider {
@@ -382,8 +422,8 @@ select.input option { background: var(--bg-elevated); }
   to   { opacity: 1; transform: translateX(0); }
 }
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 8px rgba(99,102,241,0.2); }
-  50%       { box-shadow: 0 0 20px rgba(99,102,241,0.5); }
+  0%, 100% { box-shadow: 0 0 8px light-dark(rgba(37,99,235,0.2), rgba(59,130,246,0.2)); }
+  50%       { box-shadow: 0 0 20px light-dark(rgba(37,99,235,0.5), rgba(59,130,246,0.5)); }
 }
 @keyframes spin {
   to { transform: rotate(360deg); }
@@ -487,7 +527,7 @@ select.input option { background: var(--bg-elevated); }
   --fc-button-hover-border-color: var(--border-strong);
   --fc-button-active-bg-color: var(--color-primary);
   --fc-button-active-border-color: var(--color-primary);
-  --fc-today-bg-color: rgba(99, 102, 241, 0.07);
+  --fc-today-bg-color: light-dark(rgba(37,99,235,0.06), rgba(59,130,246,0.08));
   --fc-page-bg-color: transparent;
   --fc-neutral-bg-color: var(--bg-surface);
   --fc-list-event-hover-bg-color: var(--bg-overlay);

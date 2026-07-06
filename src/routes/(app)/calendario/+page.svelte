@@ -68,8 +68,8 @@
 				start: start,
 				end: end,
 				allDay: e.all_day,
-				backgroundColor: (e as any).event_categories?.color ?? '#6366f1',
-				borderColor: (e as any).event_categories?.color ?? '#6366f1',
+				backgroundColor: (e as any).event_categories?.color ?? '#2563eb',
+				borderColor: (e as any).event_categories?.color ?? '#2563eb',
 				extendedProps: { ...e }
 			};
 		});

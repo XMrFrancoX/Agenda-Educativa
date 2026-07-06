@@ -3,7 +3,7 @@ import { dev } from '$app/environment';
 import { type Handle, redirect } from '@sveltejs/kit';
 
 // Routes that don't require authentication
-const PUBLIC_ROUTES = ['/login', '/auth/callback', '/recuperar-password', '/update-password'];
+const PUBLIC_ROUTES = ['/login', '/auth/callback', '/recuperar-password', '/update-password', '/__preview'];
 
 export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.supabase = createSupabaseServerClient(

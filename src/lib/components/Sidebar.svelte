@@ -1,7 +1,14 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { Menu, X } from 'lucide-svelte';
+	import { onMount } from 'svelte';
+	import {
+		Menu, X, LogOut, Sun, Moon,
+		Calendar, ListTodo, CalendarClock,
+		UsersRound, Users, Settings,
+		UserCog, ShieldCheck
+	} from 'lucide-svelte';
+	import { getInitialTheme, applyTheme, type Theme } from '$lib/theme';
 	import type { Snippet } from 'svelte';
 
 	let { profile } = $props<{
@@ -45,70 +52,61 @@
 	}
 
 	function avatarColor(role: string) {
-		if (role === 'director') return 'linear-gradient(135deg, #8b5cf6, #6366f1)';
-		if (role === 'teacher') return 'linear-gradient(135deg, #06b6d4, #0284c7)';
+		if (role === 'director') return 'linear-gradient(135deg, #7c3aed, #2563eb)';
+		if (role === 'teacher') return 'linear-gradient(135deg, #0891b2, #0369a1)';
 		if (role === 'admin') return 'linear-gradient(135deg, #f59e0b, #d97706)';
 		if (role === 'superadmin') return 'linear-gradient(135deg, #ea580c, #c2410c)';
 		if (role === 'student') return 'linear-gradient(135deg, #10b981, #059669)';
 		return 'linear-gradient(135deg, #ec4899, #be185d)';
 	}
 
-	const navItems = [
+	const allRoles = ['student', 'tutor', 'teacher', 'director', 'admin', 'superadmin'];
+
+	const navGroups = [
 		{
-			href: '/calendario',
-			label: 'Calendario',
-			icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
-			roles: ['student', 'tutor', 'teacher', 'director', 'admin', 'superadmin']
+			label: 'Principal',
+			items: [
+				{ href: '/calendario', label: 'Calendario', icon: Calendar, roles: allRoles },
+				{ href: '/tareas', label: 'Mis Tareas', icon: ListTodo, roles: allRoles },
+				{ href: '/reuniones', label: 'Reuniones', icon: CalendarClock, roles: allRoles }
+			]
 		},
 		{
-			href: '/tareas',
-			label: 'Mis Tareas',
-			icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`,
-			roles: ['student', 'tutor', 'teacher', 'director', 'admin', 'superadmin']
+			label: 'Gestión Escolar',
+			items: [
+				{ href: '/staff', label: 'Planificador Staff', icon: UsersRound, roles: ['director', 'admin', 'superadmin'] },
+				{ href: '/alumnos', label: 'Alumnos y Tutores', icon: Users, roles: ['director', 'admin', 'superadmin'] },
+				{ href: '/configuracion', label: 'Configuración', icon: Settings, roles: ['director', 'admin', 'superadmin'] }
+			]
 		},
 		{
-			href: '/staff',
-			label: 'Planificador Staff',
-			icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
-			roles: ['director', 'admin', 'superadmin']
-		},
-		{
-			href: '/alumnos',
-			label: 'Alumnos y Tutores',
-			icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>`,
-			roles: ['director', 'admin', 'superadmin']
-		},
-		{
-			href: '/reuniones',
-			label: 'Reuniones',
-			icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
-			roles: ['student', 'tutor', 'teacher', 'director', 'admin', 'superadmin']
-		},
-		{
-			href: '/configuracion',
-			label: 'Configuración',
-			icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
-			roles: ['director', 'admin', 'superadmin']
-		},
-		{
-			href: '/admin',
-			label: 'Gestión Usuarios',
-			icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
-			roles: ['admin', 'superadmin']
-		},
-		{
-			href: '/superadmin',
-			label: 'Global Admin',
-			icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
-			roles: ['superadmin']
+			label: 'Administración',
+			items: [
+				{ href: '/admin', label: 'Gestión Usuarios', icon: UserCog, roles: ['admin', 'superadmin'] },
+				{ href: '/superadmin', label: 'Global Admin', icon: ShieldCheck, roles: ['superadmin'] }
+			]
 		}
 	];
 
 	const currentPath = $derived($page.url.pathname);
 	const userRole = $derived(profile?.role ?? 'teacher');
-	const visibleNav = $derived(navItems.filter((item) => item.roles.includes(userRole)));
+	const visibleGroups = $derived(
+		navGroups
+			.map((group) => ({ ...group, items: group.items.filter((item) => item.roles.includes(userRole)) }))
+			.filter((group) => group.items.length > 0)
+	);
 
 	let mobileOpen = $state(false);
+	let theme = $state<Theme>('light');
+
+	onMount(() => {
+		theme = getInitialTheme();
+	});
+
+	function toggleTheme() {
+		theme = theme === 'light' ? 'dark' : 'light';
+		applyTheme(theme);
+	}
 
 	// Cerrar el drawer automáticamente al navegar
 	$effect(() => {
@@ -152,13 +150,26 @@
 			<img src={profile.school_logo_url} alt="Logo" class="mobile-brand-logo" />
 		{:else}
 			<svg width="22" height="22" viewBox="0 0 32 32" fill="none">
-				<rect width="32" height="32" rx="9" fill="#6366f1"/>
+				<rect width="32" height="32" rx="9" fill="#2563eb"/>
 				<path d="M8 12h16M8 16h10M8 20h13" stroke="white" stroke-width="2" stroke-linecap="round"/>
-				<circle cx="24" cy="10" r="4" fill="#8b5cf6"/>
+				<circle cx="24" cy="10" r="4" fill="#7c3aed"/>
 			</svg>
 		{/if}
 		<span class="mobile-brand-name">Agenda Educativa</span>
 	</div>
+	<button
+		type="button"
+		class="theme-toggle-btn"
+		onclick={toggleTheme}
+		aria-label={theme === 'light' ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro'}
+		title={theme === 'light' ? 'Modo oscuro' : 'Modo claro'}
+	>
+		{#if theme === 'light'}
+			<Moon size={18} />
+		{:else}
+			<Sun size={18} />
+		{/if}
+	</button>
 </div>
 
 <!-- Backdrop (solo mobile, cuando el drawer está abierto) -->
@@ -176,9 +187,9 @@
 				<img src={profile.school_logo_url} alt="Logo" class="custom-school-logo" />
 			{:else}
 				<svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-					<rect width="32" height="32" rx="9" fill="#6366f1"/>
+					<rect width="32" height="32" rx="9" fill="#2563eb"/>
 					<path d="M8 12h16M8 16h10M8 20h13" stroke="white" stroke-width="2" stroke-linecap="round"/>
-					<circle cx="24" cy="10" r="4" fill="#8b5cf6"/>
+					<circle cx="24" cy="10" r="4" fill="#7c3aed"/>
 				</svg>
 			{/if}
 		</div>
@@ -186,25 +197,40 @@
 			<span class="brand-name">Agenda</span>
 			<span class="brand-sub">Educativa</span>
 		</div>
+		<button
+			type="button"
+			class="theme-toggle-btn"
+			onclick={toggleTheme}
+			aria-label={theme === 'light' ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro'}
+			title={theme === 'light' ? 'Modo oscuro' : 'Modo claro'}
+		>
+			{#if theme === 'light'}
+				<Moon size={16} />
+			{:else}
+				<Sun size={16} />
+			{/if}
+		</button>
 	</div>
 
 	<div class="sidebar-divider"></div>
 
 	<!-- Navigation -->
 	<nav class="sidebar-nav" aria-label="Navegación principal">
-		{#each visibleNav as item}
-			<a
-				href={item.href}
-				class="nav-item"
-				class:active={currentPath.startsWith(item.href)}
-				aria-current={currentPath.startsWith(item.href) ? 'page' : undefined}
-			>
-				<span class="nav-icon">{@html item.icon}</span>
-				<span class="nav-label">{item.label}</span>
-				{#if currentPath.startsWith(item.href)}
-					<span class="nav-active-indicator"></span>
-				{/if}
-			</a>
+		{#each visibleGroups as group}
+			<div class="nav-group">
+				<span class="nav-group-label">{group.label}</span>
+				{#each group.items as item}
+					<a
+						href={item.href}
+						class="nav-item"
+						class:active={currentPath.startsWith(item.href)}
+						aria-current={currentPath.startsWith(item.href) ? 'page' : undefined}
+					>
+						<span class="nav-icon"><item.icon size={18} /></span>
+						<span class="nav-label">{item.label}</span>
+					</a>
+				{/each}
+			</div>
 		{/each}
 	</nav>
 
@@ -232,11 +258,7 @@
 	<!-- Logout -->
 	<form method="POST" action="/logout" class="sidebar-logout">
 		<button type="submit" class="logout-btn" id="btn-logout">
-			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-				<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-				<polyline points="16 17 21 12 16 7"/>
-				<line x1="21" y1="12" x2="9" y2="12"/>
-			</svg>
+			<LogOut size={16} />
 			Cerrar sesión
 		</button>
 	</form>
@@ -269,7 +291,7 @@
 	}
 	.brand-logo {
 		flex-shrink: 0;
-		filter: drop-shadow(0 0 8px rgba(99,102,241,0.4));
+		filter: drop-shadow(0 0 8px light-dark(rgba(37,99,235,0.25), rgba(59,130,246,0.4)));
 	}
 	.custom-school-logo {
 		width: 28px;
@@ -281,6 +303,8 @@
 		display: flex;
 		flex-direction: column;
 		line-height: 1;
+		flex: 1;
+		min-width: 0;
 	}
 	.brand-name {
 		font-family: 'Plus Jakarta Sans', sans-serif;
@@ -305,14 +329,28 @@
 	.sidebar-nav {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
+		gap: 1.25rem;
+	}
+	.nav-group {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+	.nav-group-label {
+		font-size: 0.6875rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: var(--text-muted);
+		padding: 0 0.75rem;
+		margin-bottom: 0.375rem;
 	}
 	.nav-item {
 		position: relative;
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
-		padding: 0.625rem 0.75rem;
+		padding: 0.5625rem 0.75rem;
 		border-radius: var(--radius-md);
 		color: var(--text-secondary);
 		font-size: 0.875rem;
@@ -323,12 +361,14 @@
 		overflow: hidden;
 	}
 	.nav-item:hover {
-		background: var(--bg-elevated);
+		background: var(--bg-overlay);
 		color: var(--text-primary);
 	}
 	.nav-item.active {
-		background: var(--color-primary-alpha-12, rgba(99, 102, 241, 0.12));
-		color: var(--color-primary-light, #a5b4fc);
+		background: var(--color-primary);
+		color: var(--text-on-primary);
+		font-weight: 600;
+		box-shadow: var(--shadow-sm);
 	}
 	.nav-icon {
 		flex-shrink: 0;
@@ -336,16 +376,6 @@
 		align-items: center;
 	}
 	.nav-label { flex: 1; }
-	.nav-active-indicator {
-		position: absolute;
-		right: 0;
-		top: 50%;
-		transform: translateY(-50%);
-		width: 3px;
-		height: 60%;
-		background: var(--color-primary);
-		border-radius: 2px 0 0 2px;
-	}
 
 	.sidebar-spacer { flex: 1; }
 
@@ -411,8 +441,8 @@
 		font-family: inherit;
 	}
 	.logout-btn:hover {
-		background: rgba(239, 68, 68, 0.1);
-		color: #fca5a5;
+		background: light-dark(rgba(220, 38, 38, 0.08), rgba(239, 68, 68, 0.1));
+		color: light-dark(#b91c1c, #fca5a5);
 	}
 
 	/* Mobile top bar + drawer */
@@ -449,6 +479,7 @@
 		align-items: center;
 		gap: 0.5rem;
 		min-width: 0;
+		flex: 1;
 	}
 	.mobile-brand-logo {
 		width: 22px;
@@ -465,6 +496,26 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+	}
+
+	.theme-toggle-btn {
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 30px;
+		height: 30px;
+		border-radius: 999px;
+		background: none;
+		border: 1px solid var(--border-default);
+		color: var(--text-secondary);
+		cursor: pointer;
+		transition: all var(--transition-fast);
+	}
+	.theme-toggle-btn:hover {
+		color: var(--text-primary);
+		border-color: var(--border-strong);
+		background: var(--bg-elevated);
 	}
 
 	.sidebar-backdrop {

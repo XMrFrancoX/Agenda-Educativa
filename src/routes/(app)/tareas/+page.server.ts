@@ -12,8 +12,7 @@ export const load: PageServerLoad = async ({ locals: { supabase, profile } }) =>
 		.from('tasks')
 		.select(`
 			id, title, description, due_date, status, priority,
-			created_by, assigned_to,
-			profiles!assigned_to ( id, full_name, role )
+			created_by, assigned_to
 		`)
 		.eq('school_id', profile.school_id)
 		.or(`created_by.eq.${profile.id},assigned_to.eq.${profile.id}`)

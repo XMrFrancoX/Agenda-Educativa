@@ -3,12 +3,24 @@
 	import { invalidateAll } from '$app/navigation';
 	import type { PageData } from './$types';
 	import { Building, Users, AlertCircle, Save, Plus, Search } from 'lucide-svelte';
+	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 
 	let { data }: { data: PageData } = $props();
 
 	let newSchoolName = $state('');
 	let creatingSchool = $state(false);
-	
+
+	// Confirmación de borrado de escuela
+	let deleteSchoolOpen = $state(false);
+	let schoolFormToDelete: HTMLFormElement | null = null;
+	function requestDeleteSchool(e: MouseEvent) {
+		schoolFormToDelete = (e.currentTarget as HTMLElement).closest('form');
+		deleteSchoolOpen = true;
+	}
+	function confirmDeleteSchool() {
+		schoolFormToDelete?.requestSubmit();
+	}
+
 	// Búsqueda
 	let searchSchool = $state('');
 	let searchUser = $state('');
@@ -178,7 +190,7 @@
 									<input 
 										type="color" 
 										name="color" 
-										value={school.primary_color ?? '#6366f1'} 
+										value={school.primary_color ?? '#2563eb'}
 										class="color-input" 
 										onchange={(e) => e.currentTarget.form?.requestSubmit()} 
 									/>
@@ -238,11 +250,7 @@
 							</form>
 
 							<!-- Eliminar -->
-							<form method="POST" action="?/deleteSchool" use:enhance={(e) => {
-								if (!confirm('¿Estás seguro de eliminar TOTALMENTE esta escuela y todos sus datos? Esta acción no se puede deshacer.')) {
-									e.cancel();
-									return;
-								}
+							<form method="POST" action="?/deleteSchool" use:enhance={() => {
 								processingSchoolId = school.id;
 								return async ({ result, update }) => {
 									processingSchoolId = null;
@@ -251,7 +259,7 @@
 								};
 							}}>
 								<input type="hidden" name="school_id" value={school.id} />
-								<button type="submit" class="btn btn-ghost slim-btn text-danger" disabled={processingSchoolId === school.id} title="Eliminar definitivamente">
+								<button type="button" onclick={requestDeleteSchool} class="btn btn-ghost slim-btn text-danger" disabled={processingSchoolId === school.id} title="Eliminar definitivamente">
 									{#if processingSchoolId === school.id}
 										<span class="spinner" style="width:14px;height:14px"></span>
 									{:else}
@@ -374,6 +382,14 @@
 	</div>
 </div>
 
+<ConfirmDialog
+	bind:open={deleteSchoolOpen}
+	title="Eliminar escuela"
+	description="¿Estás seguro de eliminar TOTALMENTE esta escuela y todos sus datos? Esta acción no se puede deshacer."
+	confirmLabel="Eliminar definitivamente"
+	onConfirm={confirmDeleteSchool}
+/>
+
 <style>
 	.admin-layout {
 		display: grid;
@@ -453,13 +469,13 @@
 	}
 	.school-name { display:block; font-weight: 500; font-size: 0.875rem; color: var(--text-primary); }
 	
-	.role-danger { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
-	.text-danger { color: #ef4444; }
-	.text-danger:hover { background: rgba(239, 68, 68, 0.1) !important; color: #b91c1c; }
-	.text-warning { color: #f59e0b; }
-	.text-warning:hover { background: rgba(245, 158, 11, 0.1) !important; color: #b45309; }
-	.text-success { color: #10b981; }
-	.text-success:hover { background: rgba(16, 185, 129, 0.1) !important; color: #047857; }
+	.role-danger { background: light-dark(rgba(220,38,38,0.1), rgba(239, 68, 68, 0.1)); color: light-dark(#b91c1c, #ef4444); border: 1px solid light-dark(rgba(220,38,38,0.2), rgba(239, 68, 68, 0.2)); }
+	.text-danger { color: light-dark(#dc2626, #ef4444); }
+	.text-danger:hover { background: light-dark(rgba(220,38,38,0.1), rgba(239, 68, 68, 0.1)) !important; }
+	.text-warning { color: light-dark(#b45309, #f59e0b); }
+	.text-warning:hover { background: light-dark(rgba(180,83,9,0.1), rgba(245, 158, 11, 0.1)) !important; }
+	.text-success { color: light-dark(#059669, #10b981); }
+	.text-success:hover { background: light-dark(rgba(5,150,105,0.1), rgba(16, 185, 129, 0.1)) !important; }
 
 	.color-picker-wrapper {
 		width: 30px;

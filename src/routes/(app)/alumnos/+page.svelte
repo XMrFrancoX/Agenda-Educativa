@@ -2,7 +2,8 @@
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import type { PageData } from './$types';
-	import { Users, Plus, UserPlus, X, Mail } from 'lucide-svelte';
+	import { Users, Plus, UserPlus, X, Mail, AlertCircle, CheckCircle2 } from 'lucide-svelte';
+	import { Alert, AlertDescription } from '$lib/components/ui/alert';
 
 	let { data }: { data: PageData } = $props();
 
@@ -169,10 +170,16 @@
 				</h2>
 
 				{#if inviteMessage}
-					<div class="alert-inline alert-success">{inviteMessage}</div>
+					<Alert variant="success" class="mb-4">
+						<CheckCircle2 size={16} />
+						<AlertDescription>{inviteMessage}</AlertDescription>
+					</Alert>
 				{/if}
 				{#if inviteError}
-					<div class="alert-inline alert-error">{inviteError}</div>
+					<Alert variant="destructive" class="mb-4">
+						<AlertCircle size={16} />
+						<AlertDescription>{inviteError}</AlertDescription>
+					</Alert>
 				{/if}
 
 				<form method="POST" action="?/inviteMember" use:enhance={() => {
@@ -270,23 +277,6 @@
 		font-weight: 700;
 		color: var(--text-primary);
 		margin-bottom: 1.5rem;
-	}
-
-	.alert-inline {
-		padding: 0.625rem 1rem;
-		border-radius: var(--radius-md);
-		font-size: 0.875rem;
-		margin-bottom: 1rem;
-	}
-	.alert-success {
-		background: rgba(16,185,129,0.1);
-		border: 1px solid rgba(16,185,129,0.25);
-		color: #6ee7b7;
-	}
-	.alert-error {
-		background: rgba(239,68,68,0.1);
-		border: 1px solid rgba(239,68,68,0.25);
-		color: #fca5a5;
 	}
 
 	.form-group { margin-bottom: 1rem; }

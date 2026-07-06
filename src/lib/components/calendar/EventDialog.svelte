@@ -2,6 +2,8 @@
 	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
+	import { AlertCircle } from 'lucide-svelte';
+	import { Alert, AlertDescription } from '$lib/components/ui/alert';
 
 	let {
 		open = $bindable(false),
@@ -45,7 +47,7 @@
 
 	let showNewCat = $state(false);
 	let newCatName = $state('');
-	let newCatColor = $state('#6366f1');
+	let newCatColor = $state('#2563eb');
 	let creatingCat = $state(false);
 
 	function formatDatetimeLocal(dateStr: string, defaultTime: string) {
@@ -152,7 +154,10 @@
 			</div>
 
 			{#if formError}
-				<div class="alert-inline alert-error">{formError}</div>
+				<Alert variant="destructive" class="mb-4">
+					<AlertCircle size={16} />
+					<AlertDescription>{formError}</AlertDescription>
+				</Alert>
 			{/if}
 
 			<form
@@ -424,18 +429,6 @@
 <style>
 	.event-dialog { max-width: 560px; }
 
-	.alert-inline {
-		padding: 0.625rem 1rem;
-		border-radius: var(--radius-md);
-		font-size: 0.875rem;
-		margin-bottom: 1rem;
-	}
-	.alert-error {
-		background: rgba(239,68,68,0.1);
-		border: 1px solid rgba(239,68,68,0.25);
-		color: #fca5a5;
-	}
-
 	.required { color: var(--color-danger); }
 
 	.category-grid {
@@ -463,8 +456,8 @@
 	}
 	.category-option.selected {
 		border-color: var(--color-primary);
-		background: rgba(99,102,241,0.1);
-		color: #a5b4fc;
+		background: var(--color-primary-alpha-12);
+		color: var(--color-primary-light);
 	}
 	.cat-dot {
 		width: 8px;

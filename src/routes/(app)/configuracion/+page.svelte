@@ -9,7 +9,7 @@
 	let saving = $state(false);
 	let saved = $state(false);
 	let newCatName = $state('');
-	let newCatColor = $state('#6366f1');
+	let newCatColor = $state('#2563eb');
 
 	const roleLabel: Record<string, string> = {
 		teacher: 'Docente',
@@ -62,7 +62,7 @@
 				Mi perfil
 			</h3>
 			<div class="profile-display">
-				<div class="profile-avatar-lg" style="background: linear-gradient(135deg, #6366f1, #8b5cf6)">
+				<div class="profile-avatar-lg" style="background: linear-gradient(135deg, #2563eb, #7c3aed)">
 					{(data.profile?.full_name ?? 'U')[0].toUpperCase()}
 				</div>
 				<div style="flex: 1;">

@@ -13,10 +13,11 @@
 	let creating = $state(false);
 	let formError = $state('');
 
-	import { Clock, RefreshCw, CheckCircle2 } from 'lucide-svelte';
+	import { Clock, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-svelte';
+	import { Alert, AlertDescription } from '$lib/components/ui/alert';
 
 	const columns = [
-		{ key: 'pending',     label: 'Pendiente',    color: '#6366f1', icon: Clock },
+		{ key: 'pending',     label: 'Pendiente',    color: '#2563eb', icon: Clock },
 		{ key: 'in_progress', label: 'En Progreso',  color: '#f59e0b', icon: RefreshCw },
 		{ key: 'done',        label: 'Completado',   color: '#10b981', icon: CheckCircle2 }
 	] as const;
@@ -193,7 +194,10 @@
 			</div>
 
 			{#if formError}
-				<div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,.25);border-radius:var(--radius-md);padding:.625rem 1rem;color:#fca5a5;font-size:.875rem;margin-bottom:1rem">{formError}</div>
+				<Alert variant="destructive" class="mb-4">
+					<AlertCircle size={16} />
+					<AlertDescription>{formError}</AlertDescription>
+				</Alert>
 			{/if}
 
 			<form method="POST" action="?/createTask" use:enhance={() => {

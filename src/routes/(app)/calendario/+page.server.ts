@@ -2,6 +2,12 @@ import type { PageServerLoad, Actions } from './$types';
 import { fail } from '@sveltejs/kit';
 import { sendEventNotification } from '$lib/server/notifications';
 
+const TASK_PRIORITY_COLOR: Record<string, string> = {
+	low: '#10b981',
+	medium: '#f59e0b',
+	high: '#ef4444'
+};
+
 export const load: PageServerLoad = async ({ locals: { supabase, profile } }) => {
 	// Load events — RLS handles visibility automatically based on role
 	const { data: events, error } = await supabase
@@ -16,6 +22,35 @@ export const load: PageServerLoad = async ({ locals: { supabase, profile } }) =>
 		.order('starts_at', { ascending: true });
 
 	if (error) console.error('Calendar load error:', error.message);
+
+	// Reflejar en el calendario las tareas propias con fecha límite — privadas:
+	// solo las ve quien las creó o a quien están asignadas (nunca otros usuarios).
+	let taskEvents: Record<string, any>[] = [];
+	if (profile?.id) {
+		const { data: tasks, error: tasksError } = await supabase
+			.from('tasks')
+			.select('id, title, description, due_date, status, priority, created_by')
+			.eq('school_id', profile.school_id)
+			.not('due_date', 'is', null)
+			.or(`created_by.eq.${profile.id},assigned_to.eq.${profile.id}`);
+
+		if (tasksError) console.error('Calendar tasks load error:', tasksError.message);
+
+		taskEvents = (tasks ?? []).map((t) => ({
+			id: `task-${t.id}`,
+			task_id: t.id,
+			title: t.title,
+			description: t.description,
+			starts_at: t.due_date,
+			ends_at: null,
+			all_day: true,
+			visibility: 'private',
+			created_by: t.created_by,
+			status: t.status,
+			priority: t.priority,
+			event_categories: { name: 'Tarea', color: TASK_PRIORITY_COLOR[t.priority] ?? '#2563eb' }
+		}));
+	}
 
 	// Load user preferences (for director toggle)
 	const { data: preferences } = await supabase
@@ -57,7 +92,7 @@ export const load: PageServerLoad = async ({ locals: { supabase, profile } }) =>
 	}
 
 	return {
-		events: events ?? [],
+		events: [...(events ?? []), ...taskEvents],
 		preferences: preferences ?? {
 			show_teacher_events: false,
 			notify_email: true,

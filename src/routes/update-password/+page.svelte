@@ -2,6 +2,8 @@
 	import { goto } from '$app/navigation';
 	import { createSupabaseBrowserClient } from '$lib/supabase';
 	import { onMount } from 'svelte';
+	import { Alert, AlertTitle, AlertDescription } from '$lib/components/ui/alert';
+	import { AlertCircle, CheckCircle2 } from 'lucide-svelte';
 
 	let password = $state('');
 	let confirmPassword = $state('');
@@ -104,9 +106,9 @@
 		<div class="login-brand">
 			<div class="brand-icon">
 				<svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-					<rect width="32" height="32" rx="10" fill="var(--color-primary, #6366f1)"/>
+					<rect width="32" height="32" rx="10" fill="var(--color-primary, #2563eb)"/>
 					<path d="M8 12h16M8 16h10M8 20h13" stroke="white" stroke-width="2" stroke-linecap="round"/>
-					<circle cx="24" cy="10" r="4" fill="var(--text-secondary, #8b5cf6)"/>
+					<circle cx="24" cy="10" r="4" fill="var(--color-secondary, #7c3aed)"/>
 				</svg>
 			</div>
 			<div>
@@ -122,25 +124,21 @@
 			</div>
 
 			{#if errorMsg}
-				<div class="alert-error" role="alert">
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-						<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-					</svg>
-					{errorMsg}
-				</div>
+				<Alert variant="destructive">
+					<AlertCircle size={16} />
+					<AlertDescription>{errorMsg}</AlertDescription>
+				</Alert>
 				{#if errorMsg.includes("inválido o ha expirado")}
 					<div style="text-align: center; margin-top: 1rem;">
 						<a href="/recuperar-password" class="btn btn-primary btn-login" style="text-decoration: none;">Solicitar nuevo enlace</a>
 					</div>
 				{/if}
 			{:else if success}
-				<div class="alert-success" role="alert" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); padding: 1rem; border-radius: 8px; color: #047857;">
-					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-bottom: 0.5rem;">
-						<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
-					</svg>
-					<strong>¡Contraseña actualizada!</strong>
-					<p style="font-size: 0.875rem; margin-top: 0.25rem;">Redirigiendo a tu cuenta...</p>
-				</div>
+				<Alert variant="success">
+					<CheckCircle2 size={16} />
+					<AlertTitle>¡Contraseña actualizada!</AlertTitle>
+					<AlertDescription>Redirigiendo a tu cuenta...</AlertDescription>
+				</Alert>
 			{/if}
 
 			{#if !success && (!errorMsg || !errorMsg.includes("inválido o ha expirado"))}
@@ -202,23 +200,21 @@
 	/* Estilos idénticos al login */
 	.login-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; background: var(--bg-base); }
 	.login-bg { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
-	.bg-orb { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.15; }
-	.orb-1 { width: 500px; height: 500px; background: radial-gradient(circle, #6366f1, transparent); top: -100px; left: -100px; }
-	.orb-2 { width: 400px; height: 400px; background: radial-gradient(circle, #8b5cf6, transparent); bottom: -80px; right: -80px; }
-	.orb-3 { width: 300px; height: 300px; background: radial-gradient(circle, #06b6d4, transparent); top: 50%; left: 60%; }
-	
+	.bg-orb { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.12; }
+	.orb-1 { width: 500px; height: 500px; background: radial-gradient(circle, #2563eb, transparent); top: -100px; left: -100px; }
+	.orb-2 { width: 400px; height: 400px; background: radial-gradient(circle, #7c3aed, transparent); bottom: -80px; right: -80px; }
+	.orb-3 { width: 300px; height: 300px; background: radial-gradient(circle, #0891b2, transparent); top: 50%; left: 60%; }
+
 	.login-container { position: relative; z-index: 1; width: 100%; max-width: 420px; padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem; }
-	
+
 	.login-brand { display: flex; align-items: center; gap: 0.875rem; }
-	.brand-icon { filter: drop-shadow(0 0 16px rgba(99, 102, 241, 0.5)); }
+	.brand-icon { filter: drop-shadow(0 0 16px light-dark(rgba(37, 99, 235, 0.3), rgba(59, 130, 246, 0.5))); }
 	.brand-name { font-size: 1.25rem; font-weight: 800; color: var(--text-primary); line-height: 1; }
 	.brand-tagline { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem; }
 	
 	.login-card { background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: var(--radius-xl); padding: 2rem; box-shadow: var(--shadow-lg); display: flex; flex-direction: column; gap: 1.25rem; }
 	.login-card-header h2 { font-size: 1.375rem; font-weight: 800; color: var(--text-primary); }
 	.login-card-header p { color: var(--text-muted); font-size: 0.9375rem; margin-top: 0.25rem; }
-	
-	.alert-error { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #ef4444; padding: 0.75rem 1rem; border-radius: var(--radius-md); font-size: 0.875rem; display: flex; align-items: center; gap: 0.5rem; }
 	
 	.form-group { display: flex; flex-direction: column; gap: 0.5rem; }
 	.input-label { font-size: 0.875rem; font-weight: 500; color: var(--text-primary); }

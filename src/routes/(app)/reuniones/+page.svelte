@@ -3,12 +3,24 @@
 	import { invalidateAll } from '$app/navigation';
 	import type { PageData } from './$types';
 	import { Calendar, Users, MapPin, Clock, Plus, X, FileText, CheckCircle2, XCircle, Edit } from 'lucide-svelte';
+	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 
 	let { data }: { data: PageData } = $props();
 
 	// Modals
 	let showCreate = $state(false);
 	let showEdit = $state(false);
+
+	// Confirmación de borrado de reunión
+	let deleteMeetingOpen = $state(false);
+	let meetingFormToDelete: HTMLFormElement | null = null;
+	function requestDeleteMeeting(e: MouseEvent) {
+		meetingFormToDelete = (e.currentTarget as HTMLElement).closest('form');
+		deleteMeetingOpen = true;
+	}
+	function confirmDeleteMeeting() {
+		meetingFormToDelete?.requestSubmit();
+	}
 
 	// States
 	let creating = $state(false);
@@ -81,7 +93,7 @@
 		return { scheduled: 'Programada', completed: 'Completada', cancelled: 'Cancelada', in_progress: 'En curso' }[s] ?? s;
 	}
 	function statusColor(s: string) {
-		return { scheduled: '#6366f1', completed: '#10b981', cancelled: '#ef4444', in_progress: '#f59e0b' }[s] ?? '#94a3b8';
+		return { scheduled: '#2563eb', completed: '#10b981', cancelled: '#ef4444', in_progress: '#f59e0b' }[s] ?? '#94a3b8';
 	}
 	function isPast(dt: string) { return new Date(stripTz(dt)) < new Date(); }
 
@@ -187,14 +199,13 @@
 						</div>
 
 						<div class="card-footer-actions">
-							<form method="POST" action="?/deleteMeeting" use:enhance={(e) => {
-								if (!confirm('¿Eliminar esta reunión?')) { e.cancel(); return; }
+							<form method="POST" action="?/deleteMeeting" use:enhance={() => {
 								return async ({ result, update }) => {
 									if (result.type === 'success') await invalidateAll(); else await update();
 								};
 							}}>
 								<input type="hidden" name="meeting_id" value={meeting.id} />
-								<button type="submit" class="btn btn-ghost btn-sm text-danger">
+								<button type="button" onclick={requestDeleteMeeting} class="btn btn-ghost btn-sm text-danger">
 									<X size="12" /> Eliminar reunión
 								</button>
 							</form>
@@ -291,15 +302,14 @@
 											<button type="submit" class="btn btn-ghost btn-sm text-success"><CheckCircle2 size="13" /> Completada</button>
 										</form>
 									{/if}
-									<form method="POST" action="?/deleteMeeting" use:enhance={(e) => {
-										if (!confirm('¿Eliminar esta reunión?')) { e.cancel(); return; }
+									<form method="POST" action="?/deleteMeeting" use:enhance={() => {
 										return async ({ result, update }) => {
 											if (result.type === 'success') { expandedMeeting = null; await invalidateAll(); }
 											else await update();
 										};
 									}}>
 										<input type="hidden" name="meeting_id" value={meeting.id} />
-										<button type="submit" class="btn btn-ghost btn-sm text-danger"><X size="13" /> Eliminar</button>
+										<button type="button" onclick={requestDeleteMeeting} class="btn btn-ghost btn-sm text-danger"><X size="13" /> Eliminar</button>
 									</form>
 								</div>
 							</div>
@@ -439,6 +449,13 @@
 		</div>
 	</div>
 {/if}
+
+<ConfirmDialog
+	bind:open={deleteMeetingOpen}
+	title="Eliminar reunión"
+	description="¿Eliminar esta reunión? Esta acción no se puede deshacer."
+	onConfirm={confirmDeleteMeeting}
+/>
 
 <style>
 	.page-header-content { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
