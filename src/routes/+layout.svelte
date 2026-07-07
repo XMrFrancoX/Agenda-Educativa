@@ -4,8 +4,9 @@
 	import { onMount } from 'svelte';
 	import { createSupabaseBrowserClient } from '$lib/supabase';
 	import { getInitialTheme, applyTheme, type Theme } from '$lib/theme';
-	import { Sun, Moon } from 'lucide-svelte';
+	import { Sun, Moon } from '@lucide/svelte';
 	import { page } from '$app/stores';
+	import { Toaster } from 'svelte-sonner';
 
 	let { children, data } = $props();
 
@@ -98,6 +99,8 @@
 {/if}
 
 {@render children()}
+
+<Toaster theme={theme === 'dark' ? 'dark' : 'light'} richColors position="top-right" />
 
 <style>
 	.theme-toggle {

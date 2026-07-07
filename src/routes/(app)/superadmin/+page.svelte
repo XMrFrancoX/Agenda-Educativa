@@ -2,8 +2,9 @@
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import type { PageData } from './$types';
-	import { Building, Users, AlertCircle, Save, Plus, Search } from 'lucide-svelte';
+	import { Building, Users, AlertCircle, Save, Plus, Search } from '@lucide/svelte';
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
+	import { toast } from 'svelte-sonner';
 
 	let { data }: { data: PageData } = $props();
 
@@ -205,7 +206,7 @@
 									if (result.type === 'success') await invalidateAll();
 									else if (result.type === 'failure') {
 										// @ts-ignore
-										alert(result.data?.error || 'Error al subir logo');
+										toast.error(result.data?.error || 'Error al subir logo');
 									}
 									await update();
 								};
@@ -275,10 +276,10 @@
 								return async ({ result, update }) => {
 									if (result.type === 'success') {
 										await invalidateAll();
-										alert('Dominio actualizado con éxito.');
+										toast.success('Dominio actualizado con éxito.');
 									} else if (result.type === 'failure') {
 										// @ts-ignore
-										alert(result.data?.error || 'Error al actualizar el dominio.');
+										toast.error(result.data?.error || 'Error al actualizar el dominio.');
 									}
 									await update();
 								};

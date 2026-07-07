@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { AlertOctagon } from 'lucide-svelte';
+	import { AlertOctagon } from '@lucide/svelte';
 </script>
 
 <svelte:head>

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { Alert, AlertTitle, AlertDescription } from '$lib/components/ui/alert';
-	import { AlertCircle, CheckCircle2 } from 'lucide-svelte';
+	import { AlertCircle, CheckCircle2 } from '@lucide/svelte';
 	import type { ActionData } from './$types';
 	
 	let { form }: { form: ActionData } = $props();
