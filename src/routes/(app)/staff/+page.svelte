@@ -2,7 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import type { PageData } from './$types';
-	import { Users, Plus, UserPlus, X } from 'lucide-svelte';
+	import { Users, Plus, UserPlus, X } from '@lucide/svelte';
 
 	let { data }: { data: PageData } = $props();
 

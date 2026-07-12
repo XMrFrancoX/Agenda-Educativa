@@ -2,7 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import type { PageData } from './$types';
-	import { Users, Plus, UserPlus, X, Mail, AlertCircle, CheckCircle2 } from 'lucide-svelte';
+	import { Users, Plus, UserPlus, X, Mail, AlertCircle, CheckCircle2 } from '@lucide/svelte';
 	import { Alert, AlertDescription } from '$lib/components/ui/alert';
 
 	let { data }: { data: PageData } = $props();

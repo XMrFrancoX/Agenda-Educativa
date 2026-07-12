@@ -13,7 +13,7 @@
 	let creating = $state(false);
 	let formError = $state('');
 
-	import { Clock, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-svelte';
+	import { Clock, RefreshCw, CheckCircle2, AlertCircle } from '@lucide/svelte';
 	import { Alert, AlertDescription } from '$lib/components/ui/alert';
 
 	const columns = [

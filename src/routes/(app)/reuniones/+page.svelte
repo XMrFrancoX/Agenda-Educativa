@@ -2,8 +2,9 @@
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import type { PageData } from './$types';
-	import { Calendar, Users, MapPin, Clock, Plus, X, FileText, CheckCircle2, XCircle, Edit } from 'lucide-svelte';
+	import { Calendar, Users, MapPin, Clock, Plus, X, FileText, CheckCircle2, XCircle, Edit } from '@lucide/svelte';
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
+	import { toast } from 'svelte-sonner';
 
 	let { data }: { data: PageData } = $props();
 
@@ -165,7 +166,14 @@
 								</button>
 								<form method="POST" action="?/updateStatus" use:enhance={() => {
 									return async ({ result, update }) => {
-										if (result.type === 'success') await invalidateAll(); else await update();
+										if (result.type === 'success') {
+											toast.success('Reunión marcada como completada.');
+											await invalidateAll();
+										} else {
+											// @ts-ignore
+											if (result.type === 'failure') toast.error(result.data?.error ?? 'No se pudo actualizar el estado.');
+											await update();
+										}
 									};
 								}}>
 									<input type="hidden" name="meeting_id" value={meeting.id} />
@@ -174,7 +182,14 @@
 								</form>
 								<form method="POST" action="?/updateStatus" use:enhance={() => {
 									return async ({ result, update }) => {
-										if (result.type === 'success') await invalidateAll(); else await update();
+										if (result.type === 'success') {
+											toast.success('Reunión cancelada.');
+											await invalidateAll();
+										} else {
+											// @ts-ignore
+											if (result.type === 'failure') toast.error(result.data?.error ?? 'No se pudo actualizar el estado.');
+											await update();
+										}
 									};
 								}}>
 									<input type="hidden" name="meeting_id" value={meeting.id} />
@@ -201,7 +216,14 @@
 						<div class="card-footer-actions">
 							<form method="POST" action="?/deleteMeeting" use:enhance={() => {
 								return async ({ result, update }) => {
-									if (result.type === 'success') await invalidateAll(); else await update();
+									if (result.type === 'success') {
+										toast.success('Reunión eliminada.');
+										await invalidateAll();
+									} else {
+										// @ts-ignore
+										if (result.type === 'failure') toast.error(result.data?.error ?? 'No se pudo eliminar la reunión.');
+										await update();
+									}
 								};
 							}}>
 								<input type="hidden" name="meeting_id" value={meeting.id} />
@@ -252,8 +274,15 @@
 											savingMinutes = true;
 											return async ({ result, update }) => {
 												savingMinutes = false;
-												if (result.type === 'success') { editingMinutes = null; await invalidateAll(); }
-												else await update();
+												if (result.type === 'success') {
+													toast.success('Acta guardada.');
+													editingMinutes = null;
+													await invalidateAll();
+												} else {
+													// @ts-ignore
+													if (result.type === 'failure') toast.error(result.data?.error ?? 'No se pudo guardar el acta.');
+													await update();
+												}
 											};
 										}}>
 											<input type="hidden" name="meeting_id" value={meeting.id} />
@@ -294,7 +323,14 @@
 									{#if meeting.status !== 'completed'}
 										<form method="POST" action="?/updateStatus" use:enhance={() => {
 											return async ({ result, update }) => {
-												if (result.type === 'success') await invalidateAll(); else await update();
+												if (result.type === 'success') {
+													toast.success('Reunión marcada como completada.');
+													await invalidateAll();
+												} else {
+													// @ts-ignore
+													if (result.type === 'failure') toast.error(result.data?.error ?? 'No se pudo actualizar el estado.');
+													await update();
+												}
 											};
 										}}>
 											<input type="hidden" name="meeting_id" value={meeting.id} />
@@ -304,8 +340,15 @@
 									{/if}
 									<form method="POST" action="?/deleteMeeting" use:enhance={() => {
 										return async ({ result, update }) => {
-											if (result.type === 'success') { expandedMeeting = null; await invalidateAll(); }
-											else await update();
+											if (result.type === 'success') {
+												toast.success('Reunión eliminada.');
+												expandedMeeting = null;
+												await invalidateAll();
+											} else {
+												// @ts-ignore
+												if (result.type === 'failure') toast.error(result.data?.error ?? 'No se pudo eliminar la reunión.');
+												await update();
+											}
 										};
 									}}>
 										<input type="hidden" name="meeting_id" value={meeting.id} />
@@ -337,8 +380,15 @@
 				creating = true;
 				return async ({ result, update }) => {
 					creating = false;
-					if (result.type === 'success') { resetForm(); await invalidateAll(); }
-					else await update();
+					if (result.type === 'success') {
+						toast.success('Reunión creada.');
+						resetForm();
+						await invalidateAll();
+					} else {
+						// @ts-ignore
+						if (result.type === 'failure') toast.error(result.data?.error ?? 'No se pudo crear la reunión.');
+						await update();
+					}
 				};
 			}}>
 				<div class="form-grid">
@@ -411,8 +461,15 @@
 				updatingMeeting = true;
 				return async ({ result, update }) => {
 					updatingMeeting = false;
-					if (result.type === 'success') { closeEdit(); await invalidateAll(); }
-					else await update();
+					if (result.type === 'success') {
+						toast.success('Reunión actualizada.');
+						closeEdit();
+						await invalidateAll();
+					} else {
+						// @ts-ignore
+						if (result.type === 'failure') toast.error(result.data?.error ?? 'No se pudo actualizar la reunión.');
+						await update();
+					}
 				};
 			}}>
 				<input type="hidden" name="meeting_id" value={editingMeeting.id} />

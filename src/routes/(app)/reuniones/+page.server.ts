@@ -249,7 +249,7 @@ export const actions: Actions = {
 			.from('meetings')
 			.delete()
 			.eq('id', meetingId)
-			.eq('created_by', profile?.id);
+			.eq('school_id', profile?.school_id);
 
 		if (error) return fail(500, { error: 'No se pudo eliminar la reunión.' });
 		return { success: true };

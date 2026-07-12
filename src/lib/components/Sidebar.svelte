@@ -7,7 +7,7 @@
 		Calendar, ListTodo, CalendarClock,
 		UsersRound, Users, Settings,
 		UserCog
-	} from 'lucide-svelte';
+	} from '@lucide/svelte';
 	import { getInitialTheme, applyTheme, type Theme } from '$lib/theme';
 	import type { Snippet } from 'svelte';
 

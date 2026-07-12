@@ -3,7 +3,7 @@
 	import { createSupabaseBrowserClient } from '$lib/supabase';
 	import { onMount } from 'svelte';
 	import { Alert, AlertTitle, AlertDescription } from '$lib/components/ui/alert';
-	import { AlertCircle, CheckCircle2 } from 'lucide-svelte';
+	import { AlertCircle, CheckCircle2 } from '@lucide/svelte';
 
 	let password = $state('');
 	let confirmPassword = $state('');

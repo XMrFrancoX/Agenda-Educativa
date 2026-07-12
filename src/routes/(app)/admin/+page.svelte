@@ -2,7 +2,8 @@
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import type { PageData } from './$types';
-	import { Users, Save } from 'lucide-svelte';
+	import { Users, Save } from '@lucide/svelte';
+	import { toast } from 'svelte-sonner';
 
 	let { data }: { data: PageData } = $props();
 
@@ -50,7 +51,7 @@
 								await invalidateAll();
 							} else if (result.type === 'failure') {
 								// @ts-ignore
-								alert(result.data?.error || 'Error al actualizar usuario');
+								toast.error(result.data?.error || 'Error al actualizar usuario');
 							}
 							await update();
 						};
