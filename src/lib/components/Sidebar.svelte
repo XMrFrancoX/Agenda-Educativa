@@ -6,7 +6,7 @@
 		Menu, X, LogOut, Sun, Moon,
 		Calendar, ListTodo, CalendarClock,
 		UsersRound, Users, Settings,
-		UserCog, ShieldCheck
+		UserCog
 	} from 'lucide-svelte';
 	import { getInitialTheme, applyTheme, type Theme } from '$lib/theme';
 	import type { Snippet } from 'svelte';
@@ -82,8 +82,7 @@
 		{
 			label: 'Administración',
 			items: [
-				{ href: '/admin', label: 'Gestión Usuarios', icon: UserCog, roles: ['admin', 'superadmin'] },
-				{ href: '/superadmin', label: 'Global Admin', icon: ShieldCheck, roles: ['superadmin'] }
+				{ href: '/admin', label: 'Gestión Usuarios', icon: UserCog, roles: ['admin', 'superadmin'] }
 			]
 		}
 	];
