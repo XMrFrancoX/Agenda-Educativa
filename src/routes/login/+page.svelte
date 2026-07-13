@@ -41,9 +41,9 @@
 					<img src={data.tenant.logo_url} alt="Logo Institucional" style="width: 32px; height: 32px; border-radius: 6px; object-fit: contain;" />
 				{:else}
 					<svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-						<rect width="32" height="32" rx="10" fill="var(--color-primary, #2563eb)"/>
+						<rect width="32" height="32" rx="10" fill="var(--color-primary, #0a3055)"/>
 						<path d="M8 12h16M8 16h10M8 20h13" stroke="white" stroke-width="2" stroke-linecap="round"/>
-						<circle cx="24" cy="10" r="4" fill="var(--color-secondary, #7c3aed)"/>
+						<circle cx="24" cy="10" r="4" fill="var(--color-secondary, #fbb117)"/>
 					</svg>
 				{/if}
 			</div>
@@ -176,21 +176,21 @@
 	.orb-1 {
 		width: 500px;
 		height: 500px;
-		background: radial-gradient(circle, #2563eb, transparent);
+		background: radial-gradient(circle, #0a3055, transparent);
 		top: -100px;
 		left: -100px;
 	}
 	.orb-2 {
 		width: 400px;
 		height: 400px;
-		background: radial-gradient(circle, #7c3aed, transparent);
+		background: radial-gradient(circle, #f59d1e, transparent);
 		bottom: -80px;
 		right: -80px;
 	}
 	.orb-3 {
 		width: 300px;
 		height: 300px;
-		background: radial-gradient(circle, #0891b2, transparent);
+		background: radial-gradient(circle, #fbb117, transparent);
 		top: 50%;
 		left: 60%;
 	}
@@ -213,7 +213,7 @@
 		gap: 0.875rem;
 	}
 	.brand-icon {
-		filter: drop-shadow(0 0 16px light-dark(rgba(37, 99, 235, 0.3), rgba(59, 130, 246, 0.5)));
+		filter: drop-shadow(0 0 16px light-dark(rgba(10, 48, 85, 0.3), rgba(245, 157, 30, 0.5)));
 	}
 	.brand-name {
 		font-size: 1.25rem;

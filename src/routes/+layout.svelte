@@ -6,6 +6,7 @@
 	import { getInitialTheme, applyTheme, type Theme } from '$lib/theme';
 	import { Sun, Moon } from 'lucide-svelte';
 	import { page } from '$app/stores';
+	import { Toaster } from 'svelte-sonner';
 
 	let { children, data } = $props();
 
@@ -80,6 +81,8 @@
 		</style>`}
 	{/if}
 </svelte:head>
+
+<Toaster richColors position="top-right" closeButton />
 
 {#if !hasSidebar}
 	<button

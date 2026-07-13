@@ -47,7 +47,7 @@
 
 	let showNewCat = $state(false);
 	let newCatName = $state('');
-	let newCatColor = $state('#2563eb');
+	let newCatColor = $state('#0a3055');
 	let creatingCat = $state(false);
 
 	function formatDatetimeLocal(dateStr: string, defaultTime: string) {

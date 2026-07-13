@@ -92,8 +92,11 @@
 	function statusLabel(s: string) {
 		return { scheduled: 'Programada', completed: 'Completada', cancelled: 'Cancelada', in_progress: 'En curso' }[s] ?? s;
 	}
-	function statusColor(s: string) {
-		return { scheduled: '#2563eb', completed: '#10b981', cancelled: '#ef4444', in_progress: '#f59e0b' }[s] ?? '#94a3b8';
+	function statusBadgeClass(s: string) {
+		return { scheduled: 'badge-primary', completed: 'badge-success', cancelled: 'badge-danger', in_progress: 'badge-warning' }[s] ?? 'badge-muted';
+	}
+	function statusDotColor(s: string) {
+		return { scheduled: 'var(--color-primary)', completed: 'var(--color-success)', cancelled: 'var(--color-danger)', in_progress: 'var(--color-warning)' }[s] ?? 'var(--text-muted)';
 	}
 	function isPast(dt: string) { return new Date(stripTz(dt)) < new Date(); }
 
@@ -226,12 +229,12 @@
 						<button class="meeting-row-header"
 							onclick={() => expandedMeeting = expandedMeeting === meeting.id ? null : meeting.id}
 						>
-							<span class="status-dot" style="background: {statusColor(meeting.status)}"></span>
+							<span class="status-dot" style="background: {statusDotColor(meeting.status)}"></span>
 							<div class="meeting-row-info">
 								<span class="meeting-row-title">{meeting.title}</span>
 								<span class="meeting-row-meta">{formatDate(meeting.date)} · {formatTime(meeting.date)}{meeting.location ? ' · ' + meeting.location : ''}</span>
 							</div>
-							<span class="badge" style="background:{statusColor(meeting.status)}20;color:{statusColor(meeting.status)};border:1px solid {statusColor(meeting.status)}40;">{statusLabel(meeting.status)}</span>
+							<span class="badge {statusBadgeClass(meeting.status)}">{statusLabel(meeting.status)}</span>
 							<span class="meeting-row-participants"><Users size="13" /> {(meeting.meeting_participants ?? []).length}</span>
 						</button>
 
@@ -474,9 +477,9 @@
 	}
 	.icon-btn:hover { color: var(--text-primary); background: var(--bg-overlay); }
 	.icon-btn.text-success { color: var(--color-success); }
-	.icon-btn.text-success:hover { background: rgba(16,185,129,0.1); }
+	.icon-btn.text-success:hover { background: color-mix(in srgb, var(--color-success) 10%, transparent); }
 	.icon-btn.text-danger { color: var(--color-danger); }
-	.icon-btn.text-danger:hover { background: rgba(239,68,68,0.1); }
+	.icon-btn.text-danger:hover { background: color-mix(in srgb, var(--color-danger) 10%, transparent); }
 
 	/* Modal */
 	.meeting-dialog { max-width: 580px; }
@@ -494,7 +497,7 @@
 		background: var(--bg-surface); cursor: pointer; font-size: 0.8125rem;
 		transition: border-color var(--transition-fast), background var(--transition-fast);
 	}
-	.participant-chip.selected { border-color: var(--color-primary); background: rgba(99,102,241,0.1); }
+	.participant-chip.selected { border-color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 10%, transparent); }
 	.participant-avatar { width: 24px; height: 24px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: bold; flex-shrink: 0; }
 	.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border-width: 0; }
 
@@ -505,7 +508,7 @@
 	.meeting-card:hover { box-shadow: var(--shadow-md); border-color: var(--border-default); }
 
 	.meeting-card-header { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 0.75rem; }
-	.meeting-date-badge { display: flex; flex-direction: column; align-items: center; background: rgba(99,102,241,0.15); border-radius: var(--radius-md); padding: 0.4rem 0.6rem; min-width: 44px; flex-shrink: 0; }
+	.meeting-date-badge { display: flex; flex-direction: column; align-items: center; background: color-mix(in srgb, var(--color-primary) 15%, transparent); border-radius: var(--radius-md); padding: 0.4rem 0.6rem; min-width: 44px; flex-shrink: 0; }
 	.meeting-day { font-size: 1.25rem; font-weight: 800; color: var(--color-primary); line-height: 1; }
 	.meeting-month { font-size: 0.65rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; }
 	.meeting-info { flex: 1; min-width: 0; }
@@ -518,7 +521,7 @@
 	.participants-row { display: flex; align-items: center; gap: 0.25rem; flex-wrap: wrap; }
 	.mini-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--bg-highlight); border: 2px solid var(--bg-elevated); display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700; color: var(--text-secondary); margin-left: -6px; }
 	.mini-avatar:first-child { margin-left: 0; }
-	.mini-avatar.more { background: var(--color-primary); color: white; font-size: 0.6rem; }
+	.mini-avatar.more { background: var(--color-primary); color: var(--text-on-primary); font-size: 0.6rem; }
 	.participants-count { font-size: 0.75rem; color: var(--text-muted); margin-left: 0.5rem; }
 
 	.card-footer-actions { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border-subtle); }

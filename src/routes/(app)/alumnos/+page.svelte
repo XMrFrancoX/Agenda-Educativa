@@ -332,7 +332,7 @@
 		height: 20px;
 		border-radius: 50%;
 		background: var(--color-primary);
-		color: white;
+		color: var(--text-on-primary);
 		display: flex;
 		align-items: center;
 		justify-content: center;

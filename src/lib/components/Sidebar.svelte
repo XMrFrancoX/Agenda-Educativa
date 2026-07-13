@@ -52,7 +52,7 @@
 	}
 
 	function avatarColor(role: string) {
-		if (role === 'director') return 'linear-gradient(135deg, #7c3aed, #2563eb)';
+		if (role === 'director') return 'linear-gradient(135deg, #7c3aed, #0a3055)';
 		if (role === 'teacher') return 'linear-gradient(135deg, #0891b2, #0369a1)';
 		if (role === 'admin') return 'linear-gradient(135deg, #f59e0b, #d97706)';
 		if (role === 'superadmin') return 'linear-gradient(135deg, #ea580c, #c2410c)';
@@ -149,9 +149,9 @@
 			<img src={profile.school_logo_url} alt="Logo" class="mobile-brand-logo" />
 		{:else}
 			<svg width="22" height="22" viewBox="0 0 32 32" fill="none">
-				<rect width="32" height="32" rx="9" fill="#2563eb"/>
+				<rect width="32" height="32" rx="9" fill="#0a3055"/>
 				<path d="M8 12h16M8 16h10M8 20h13" stroke="white" stroke-width="2" stroke-linecap="round"/>
-				<circle cx="24" cy="10" r="4" fill="#7c3aed"/>
+				<circle cx="24" cy="10" r="4" fill="#f59d1e"/>
 			</svg>
 		{/if}
 		<span class="mobile-brand-name">Agenda Educativa</span>
@@ -186,9 +186,9 @@
 				<img src={profile.school_logo_url} alt="Logo" class="custom-school-logo" />
 			{:else}
 				<svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-					<rect width="32" height="32" rx="9" fill="#2563eb"/>
+					<rect width="32" height="32" rx="9" fill="#0a3055"/>
 					<path d="M8 12h16M8 16h10M8 20h13" stroke="white" stroke-width="2" stroke-linecap="round"/>
-					<circle cx="24" cy="10" r="4" fill="#7c3aed"/>
+					<circle cx="24" cy="10" r="4" fill="#f59d1e"/>
 				</svg>
 			{/if}
 		</div>
@@ -290,7 +290,7 @@
 	}
 	.brand-logo {
 		flex-shrink: 0;
-		filter: drop-shadow(0 0 8px light-dark(rgba(37,99,235,0.25), rgba(59,130,246,0.4)));
+		filter: drop-shadow(0 0 8px light-dark(rgba(10,48,85,0.25), rgba(245,157,30,0.4)));
 	}
 	.custom-school-logo {
 		width: 28px;
@@ -440,8 +440,8 @@
 		font-family: inherit;
 	}
 	.logout-btn:hover {
-		background: light-dark(rgba(220, 38, 38, 0.08), rgba(239, 68, 68, 0.1));
-		color: light-dark(#b91c1c, #fca5a5);
+		background: color-mix(in srgb, var(--color-danger) 8%, transparent);
+		color: var(--color-danger);
 	}
 
 	/* Mobile top bar + drawer */

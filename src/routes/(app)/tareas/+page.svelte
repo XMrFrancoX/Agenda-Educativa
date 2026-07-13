@@ -17,7 +17,7 @@
 	import { Alert, AlertDescription } from '$lib/components/ui/alert';
 
 	const columns = [
-		{ key: 'pending',     label: 'Pendiente',    color: '#2563eb', icon: Clock },
+		{ key: 'pending',     label: 'Pendiente',    color: '#0a3055', icon: Clock },
 		{ key: 'in_progress', label: 'En Progreso',  color: '#f59e0b', icon: RefreshCw },
 		{ key: 'done',        label: 'Completado',   color: '#10b981', icon: CheckCircle2 }
 	] as const;

@@ -3,6 +3,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import type { PageData } from './$types';
 	import { Users, Save } from 'lucide-svelte';
+	import { toast } from 'svelte-sonner';
 
 	let { data }: { data: PageData } = $props();
 
@@ -50,7 +51,7 @@
 								await invalidateAll();
 							} else if (result.type === 'failure') {
 								// @ts-ignore
-								alert(result.data?.error || 'Error al actualizar usuario');
+								toast.error(result.data?.error || 'Error al actualizar usuario');
 							}
 							await update();
 						};
@@ -132,7 +133,7 @@
 		width: 32px;
 		height: 32px;
 		border-radius: 50%;
-		color: white;
+		color: var(--text-on-primary);
 		display: flex;
 		align-items: center;
 		justify-content: center;
