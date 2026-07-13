@@ -13,6 +13,7 @@ declare global {
 				id: string;
 				full_name: string | null;
 				role: 'teacher' | 'director' | 'admin' | 'superadmin' | 'student' | 'tutor';
+				extra_roles: string[];
 				school_id: string;
 				phone: string | null;
 				avatar_url: string | null;

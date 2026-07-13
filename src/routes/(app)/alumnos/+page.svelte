@@ -4,8 +4,11 @@
 	import type { PageData } from './$types';
 	import { Users, Plus, UserPlus, X, Mail, AlertCircle, CheckCircle2 } from 'lucide-svelte';
 	import { Alert, AlertDescription } from '$lib/components/ui/alert';
+	import { toast } from 'svelte-sonner';
+	import SearchableSelect from '$lib/components/SearchableSelect.svelte';
 
 	let { data }: { data: PageData } = $props();
+	let resendingId = $state<string | null>(null);
 
 	let newCourseName = $state('');
 	let creatingCourse = $state(false);
@@ -94,14 +97,14 @@
 								<form method="POST" action="?/addMember" use:enhance>
 									<input type="hidden" name="course_id" value={course.id} />
 									<div style="display:flex;gap:0.5rem;">
-										<select name="user_id" class="input" required style="padding:0.25rem 0.5rem;height:auto;font-size:0.875rem;">
-											<option value="">Asignar docente...</option>
-											{#each data.teachers as t}
-												{#if !course.course_members.some(m => m.user_id === t.id)}
-													<option value={t.id}>{t.full_name ?? '(sin nombre)'}</option>
-												{/if}
-											{/each}
-										</select>
+										<SearchableSelect
+											name="user_id"
+											required
+											placeholder="Buscar docente por nombre o mail..."
+											options={data.teachers
+												.filter((t) => !course.course_members.some((m) => m.user_id === t.id))
+												.map((t) => ({ id: t.id, label: t.full_name ?? '(sin nombre)', sublabel: t.email }))}
+										/>
 										<button type="submit" class="btn btn-ghost" style="padding:0.25rem 0.5rem;">
 											<UserPlus size="14" />
 										</button>
@@ -137,14 +140,14 @@
 								<form method="POST" action="?/addMember" use:enhance>
 									<input type="hidden" name="course_id" value={course.id} />
 									<div style="display:flex;gap:0.5rem;">
-										<select name="user_id" class="input" required style="padding:0.25rem 0.5rem;height:auto;font-size:0.875rem;">
-											<option value="">Agregar alumno/tutor existente...</option>
-											{#each data.students as st}
-												{#if !course.course_members.some(m => m.user_id === st.id)}
-													<option value={st.id}>{st.full_name ?? '(sin nombre)'} ({st.role === 'student' ? 'Alumno' : 'Tutor'})</option>
-												{/if}
-											{/each}
-										</select>
+										<SearchableSelect
+											name="user_id"
+											required
+											placeholder="Buscar alumno/tutor por nombre o mail..."
+											options={data.students
+												.filter((st) => !course.course_members.some((m) => m.user_id === st.id))
+												.map((st) => ({ id: st.id, label: st.full_name ?? '(sin nombre)', sublabel: `${st.role === 'student' ? 'Alumno' : 'Tutor'} · ${st.email ?? ''}` }))}
+										/>
 										<button type="submit" class="btn btn-ghost" style="padding:0.25rem 0.5rem;">
 											<UserPlus size="14" />
 										</button>
@@ -241,8 +244,31 @@
 						</div>
 						<div class="info">
 							<p class="s-name">{st.full_name ?? 'Sin nombre'}</p>
-							<p class="s-email">{st.role === 'student' ? 'Alumno/a' : 'Tutor/a'}</p>
+							<p class="s-email">{st.role === 'student' ? 'Alumno/a' : 'Tutor/a'}{st.pending ? ' · Invitación pendiente' : ''}</p>
 						</div>
+						{#if st.pending}
+							<form
+								method="POST"
+								action="?/resendInvite"
+								use:enhance={() => {
+									resendingId = st.id;
+									return async ({ result, update }) => {
+										resendingId = null;
+										if (result.type === 'success') toast.success('Invitación reenviada.');
+										else toast.error('No se pudo reenviar la invitación.');
+										await update();
+									};
+								}}
+							>
+								<input type="hidden" name="user_id" value={st.id} />
+								<input type="hidden" name="email" value={st.email} />
+								<input type="hidden" name="full_name" value={st.full_name ?? ''} />
+								<input type="hidden" name="role" value={st.role} />
+								<button type="submit" class="btn btn-ghost btn-sm" disabled={resendingId === st.id}>
+									{resendingId === st.id ? 'Enviando...' : 'Reenviar invitación'}
+								</button>
+							</form>
+						{/if}
 					</div>
 				{:else}
 					<p style="font-size:0.875rem;color:var(--text-muted);font-style:italic;">No hay alumnos ni tutores en esta escuela.</p>
@@ -375,6 +401,8 @@
 		background: var(--bg-surface);
 		border: 1px solid var(--border-subtle);
 	}
+	.student-row .info { flex: 1; min-width: 0; }
+	.btn-sm { height: 28px; padding: 0 0.625rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.25rem; flex-shrink: 0; }
 	.student-row .avatar {
 		width: 36px;
 		height: 36px;

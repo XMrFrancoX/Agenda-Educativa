@@ -16,6 +16,7 @@
 			id: string;
 			full_name: string | null;
 			role: 'teacher' | 'director' | 'admin' | 'superadmin' | 'student' | 'tutor';
+			extra_roles?: string[];
 			school_id: string;
 			phone: string | null;
 			avatar_url: string | null;
@@ -88,18 +89,53 @@
 	];
 
 	const currentPath = $derived($page.url.pathname);
-	const userRole = $derived(profile?.role ?? 'teacher');
+
+	// Roles adicionales (ej. un director que también da clases) permiten
+	// "actuar como" otro rol — solo cambia qué ve acá en el sidebar, no los
+	// permisos reales de la cuenta (esos siguen siendo los de profile.role
+	// a nivel de RLS). La elección se guarda en localStorage por usuario.
+	const availableRoles = $derived(
+		profile ? [profile.role, ...(profile.extra_roles ?? [])] : []
+	);
+	let activeRole = $state<string | null>(null);
+	const userRole = $derived(activeRole ?? profile?.role ?? 'teacher');
+
 	const visibleGroups = $derived(
 		navGroups
 			.map((group) => ({ ...group, items: group.items.filter((item) => item.roles.includes(userRole)) }))
 			.filter((group) => group.items.length > 0)
 	);
 
+	function loadActiveRole() {
+		if (!profile) return;
+		try {
+			const stored = localStorage.getItem(`activeRole:${profile.id}`);
+			activeRole = stored && availableRoles.includes(stored) ? stored : profile.role;
+		} catch {
+			activeRole = profile.role;
+		}
+	}
+
+	function switchRole(role: string) {
+		activeRole = role;
+		if (profile) {
+			try {
+				localStorage.setItem(`activeRole:${profile.id}`, role);
+			} catch {
+				// localStorage puede no estar disponible — no es crítico.
+			}
+		}
+		// Volver al calendario: evita quedar en una pantalla que el nuevo
+		// rol activo no debería ver (ej. /admin al pasar a "Docente").
+		goto('/calendario');
+	}
+
 	let mobileOpen = $state(false);
 	let theme = $state<Theme>('light');
 
 	onMount(() => {
 		theme = getInitialTheme();
+		loadActiveRole();
 	});
 
 	function toggleTheme() {
@@ -235,6 +271,25 @@
 
 	<div class="sidebar-spacer"></div>
 
+	<!-- Switch de rol activo (solo si el usuario tiene más de un rol asignado) -->
+	{#if availableRoles.length > 1}
+		<div class="role-switch">
+			<span class="role-switch-label">Viendo como</span>
+			<div class="role-switch-options">
+				{#each availableRoles as r}
+					<button
+						type="button"
+						class="role-switch-pill"
+						class:active={userRole === r}
+						onclick={() => switchRole(r)}
+					>
+						{roleLabel[r]}
+					</button>
+				{/each}
+			</div>
+		</div>
+	{/if}
+
 	<!-- User Profile -->
 	{#if profile}
 		<div class="sidebar-profile">
@@ -247,8 +302,8 @@
 			</div>
 			<div class="profile-info">
 				<span class="profile-name">{profile.full_name ?? 'Usuario'}</span>
-				<span class="badge {roleClass[profile.role]} profile-role-badge">
-					{roleLabel[profile.role]}
+				<span class="badge {roleClass[userRole]} profile-role-badge">
+					{roleLabel[userRole]}
 				</span>
 			</div>
 		</div>
@@ -377,6 +432,43 @@
 	.nav-label { flex: 1; }
 
 	.sidebar-spacer { flex: 1; }
+
+	/* Role switch */
+	.role-switch {
+		padding: 0.5rem 0.75rem;
+		margin-bottom: 0.5rem;
+	}
+	.role-switch-label {
+		display: block;
+		font-size: 0.6875rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: var(--text-muted);
+		margin-bottom: 0.375rem;
+	}
+	.role-switch-options {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.375rem;
+	}
+	.role-switch-pill {
+		font-size: 0.75rem;
+		font-weight: 500;
+		padding: 0.25rem 0.625rem;
+		border-radius: 999px;
+		border: 1px solid var(--border-default);
+		background: none;
+		color: var(--text-secondary);
+		cursor: pointer;
+		transition: all var(--transition-fast);
+	}
+	.role-switch-pill:hover { border-color: var(--border-strong); color: var(--text-primary); }
+	.role-switch-pill.active {
+		background: var(--color-primary);
+		border-color: var(--color-primary);
+		color: var(--text-on-primary);
+	}
 
 	/* Profile */
 	.sidebar-profile {

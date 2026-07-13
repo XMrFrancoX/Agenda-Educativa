@@ -371,13 +371,22 @@ select.input option { background: var(--bg-elevated); }
   background: var(--bg-elevated);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-xl);
-  padding: 2rem;
   width: 100%;
   max-width: 520px;
   max-height: 90vh;
-  overflow-y: auto;
+  /* El scroll vive en .dialog-scroll (adentro), no acá — así el propio
+     border-radius recorta la barra de scroll en vez de que se salga del
+     recuadro redondeado (pasaba con overflow-y directo en este mismo
+     elemento). */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   box-shadow: var(--shadow-lg);
   animation: slideUp var(--transition-base) ease;
+}
+.dialog-scroll {
+  overflow-y: auto;
+  padding: 2rem;
 }
 .dialog-header {
   display: flex;
