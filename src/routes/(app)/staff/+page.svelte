@@ -2,7 +2,10 @@
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import type { PageData } from './$types';
-	import { Users, Plus, UserPlus, X } from '@lucide/svelte';
+	import { Users, Plus, UserPlus, X, Mail, AlertCircle, CheckCircle2 } from '@lucide/svelte';
+	import { Alert, AlertDescription } from '$lib/components/ui/alert';
+	import { toast } from 'svelte-sonner';
+	import SearchableSelect from '$lib/components/SearchableSelect.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -11,6 +14,14 @@
 
 	let selectedGroupForUser = $state<string | null>(null);
 	let selectedUser = $state('');
+
+	let inviteFullName = $state('');
+	let inviteEmail = $state('');
+	let inviteRole = $state('teacher');
+	let inviting = $state(false);
+	let inviteMessage = $state('');
+	let inviteError = $state('');
+	let resendingId = $state<string | null>(null);
 </script>
 
 <svelte:head>
@@ -87,14 +98,14 @@
 							<form method="POST" action="?/addMember" use:enhance>
 								<input type="hidden" name="group_id" value={group.id} />
 								<div style="display:flex;gap:0.5rem;">
-									<select name="user_id" class="input" required style="padding:0.25rem 0.5rem;height:auto;font-size:0.875rem;">
-										<option value="">Seleccionar docente...</option>
-										{#each data.teachers as teacher}
-											{#if !group.staff_group_members.some(m => m.user_id === teacher.id)}
-												<option value={teacher.id}>{teacher.full_name ?? '(sin nombre)'}</option>
-											{/if}
-										{/each}
-									</select>
+									<SearchableSelect
+										name="user_id"
+										required
+										placeholder="Buscar docente por nombre o mail..."
+										options={data.teachers
+											.filter((teacher) => !group.staff_group_members.some((m) => m.user_id === teacher.id))
+											.map((teacher) => ({ id: teacher.id, label: teacher.full_name ?? '(sin nombre)', sublabel: teacher.email }))}
+									/>
 									<button type="submit" class="btn btn-ghost" style="padding:0.25rem 0.5rem;">
 										<UserPlus size="14" />
 									</button>
@@ -111,23 +122,104 @@
 			</div>
 		</div>
 
-		<!-- Listado General -->
-		<div class="card teachers-panel">
-			<h2 class="section-title">Todos los Docentes</h2>
-			<div class="teachers-list">
-				{#each data.teachers as teacher}
-				<div class="teacher-row">
-					<div class="avatar" style="background:var(--role-teacher)">
-						{(teacher.full_name ?? 'U')[0].toUpperCase()}
+		<!-- Invitar + listado -->
+		<div class="side-panels">
+			<div class="card invite-panel">
+				<h2 class="section-title">
+					<Mail size="18" /> Invitar Docente/Director
+				</h2>
+
+				{#if inviteMessage}
+					<Alert variant="success" class="mb-4">
+						<CheckCircle2 size={16} />
+						<AlertDescription>{inviteMessage}</AlertDescription>
+					</Alert>
+				{/if}
+				{#if inviteError}
+					<Alert variant="destructive" class="mb-4">
+						<AlertCircle size={16} />
+						<AlertDescription>{inviteError}</AlertDescription>
+					</Alert>
+				{/if}
+
+				<form method="POST" action="?/inviteMember" use:enhance={() => {
+					inviting = true;
+					inviteMessage = '';
+					inviteError = '';
+					return async ({ result, update }) => {
+						inviting = false;
+						if (result.type === 'success') {
+							inviteMessage = 'Invitación enviada correctamente.';
+							inviteFullName = '';
+							inviteEmail = '';
+							await invalidateAll();
+						} else if (result.type === 'failure') {
+							inviteError = (result.data?.error as string) ?? 'Error al invitar.';
+						} else {
+							await update();
+						}
+					};
+				}}>
+					<div class="form-group">
+						<label class="input-label" for="invite-name">Nombre completo</label>
+						<input id="invite-name" type="text" name="full_name" class="input" bind:value={inviteFullName} required />
 					</div>
-					<div class="info">
-						<p class="t-name">{teacher.full_name ?? 'Sin nombre'}</p>
-						<p class="t-email">{teacher.role === 'director' ? 'Director' : 'Docente'}</p>
+					<div class="form-group">
+						<label class="input-label" for="invite-email">Email</label>
+						<input id="invite-email" type="email" name="email" class="input" bind:value={inviteEmail} required />
 					</div>
+					<div class="form-group">
+						<label class="input-label" for="invite-role">Rol</label>
+						<select id="invite-role" name="role" class="input" bind:value={inviteRole}>
+							<option value="teacher">Docente</option>
+							<option value="director">Director/a</option>
+						</select>
+					</div>
+					<button type="submit" class="btn btn-primary" disabled={inviting} style="width:100%;">
+						{inviting ? 'Enviando...' : 'Invitar'}
+					</button>
+				</form>
+			</div>
+
+			<div class="card teachers-panel">
+				<h2 class="section-title">Todos los Docentes</h2>
+				<div class="teachers-list">
+					{#each data.teachers as teacher}
+					<div class="teacher-row">
+						<div class="avatar" style="background:var(--role-teacher)">
+							{(teacher.full_name ?? 'U')[0].toUpperCase()}
+						</div>
+						<div class="info">
+							<p class="t-name">{teacher.full_name ?? 'Sin nombre'}</p>
+							<p class="t-email">{teacher.role === 'director' ? 'Director' : 'Docente'}{teacher.pending ? ' · Invitación pendiente' : ''}</p>
+						</div>
+						{#if teacher.pending}
+							<form
+								method="POST"
+								action="?/resendInvite"
+								use:enhance={() => {
+									resendingId = teacher.id;
+									return async ({ result, update }) => {
+										resendingId = null;
+										if (result.type === 'success') toast.success('Invitación reenviada.');
+										else toast.error('No se pudo reenviar la invitación.');
+										await update();
+									};
+								}}
+							>
+								<input type="hidden" name="email" value={teacher.email} />
+								<input type="hidden" name="full_name" value={teacher.full_name ?? ''} />
+								<input type="hidden" name="role" value={teacher.role} />
+								<button type="submit" class="btn btn-ghost btn-sm" disabled={resendingId === teacher.id}>
+									{resendingId === teacher.id ? 'Enviando...' : 'Reenviar invitación'}
+								</button>
+							</form>
+						{/if}
+					</div>
+				{:else}
+					<p style="font-size:0.875rem;color:var(--text-muted);font-style:italic;">No hay docentes en esta escuela.</p>
+				{/each}
 				</div>
-			{:else}
-				<p style="font-size:0.875rem;color:var(--text-muted);font-style:italic;">No hay docentes en esta escuela.</p>
-			{/each}
 			</div>
 		</div>
 
@@ -142,6 +234,14 @@
 		align-items: start;
 	}
 	@media (max-width: 900px) { .staff-layout { grid-template-columns: 1fr; } }
+
+	.side-panels {
+		display: flex;
+		flex-direction: column;
+		gap: 1.5rem;
+	}
+
+	.form-group { margin-bottom: 1rem; }
 
 	.section-title {
 		display: flex;
@@ -193,7 +293,7 @@
 		height: 20px;
 		border-radius: 50%;
 		background: var(--color-primary);
-		color: white;
+		color: var(--text-on-primary);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -242,6 +342,8 @@
 		justify-content: center;
 		font-weight: 700;
 	}
+	.teacher-row .info { flex: 1; min-width: 0; }
 	.t-name { font-weight: 600; font-size: 0.875rem; color: var(--text-primary); }
 	.t-email { font-size: 0.75rem; color: var(--text-muted); }
+	.btn-sm { height: 28px; padding: 0 0.625rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.25rem; flex-shrink: 0; }
 </style>

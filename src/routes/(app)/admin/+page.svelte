@@ -57,7 +57,7 @@
 						};
 					}}>
 						<input type="hidden" name="user_id" value={user.id} />
-						
+
 						<div class="form-group-inline">
 							<!-- El Admin de la escuela no puede modificar su propio rol a superadmin -->
 							<select name="role" class="input slim-select" value={user.role} required disabled={user.role === 'superadmin'} title={user.role === 'superadmin' ? 'Tu rol actual de dueño del sistema no se puede modificar desde aquí por seguridad.' : 'Cambiar rol'}>
@@ -70,6 +70,20 @@
 									<option value="superadmin">Super Admin</option>
 								{/if}
 							</select>
+
+							{#if user.role !== 'superadmin'}
+								<div class="extra-roles">
+									<span class="extra-roles-label">También:</span>
+									{#each ['teacher', 'director', 'admin'] as extra}
+										{#if extra !== user.role}
+											<label class="extra-role-chip">
+												<input type="checkbox" name="extra_roles" value={extra} checked={user.extra_roles?.includes(extra)} />
+												{extra === 'teacher' ? 'Docente' : extra === 'director' ? 'Director' : 'Admin'}
+											</label>
+										{/if}
+									{/each}
+								</div>
+							{/if}
 
 							<button type="submit" class="btn btn-primary slim-btn" title="Guardar cambios" disabled={savingUserId === user.id || user.role === 'superadmin'}>
 								{#if savingUserId === user.id}
@@ -133,7 +147,7 @@
 		width: 32px;
 		height: 32px;
 		border-radius: 50%;
-		color: white;
+		color: var(--text-on-primary);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -165,6 +179,23 @@
 		align-items: center;
 		gap: 0.25rem;
 		font-size: 0.8125rem;
+	}
+
+	.extra-roles {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+	.extra-roles-label { font-size: 0.75rem; color: var(--text-muted); }
+	.extra-role-chip {
+		display: flex;
+		align-items: center;
+		gap: 0.3rem;
+		font-size: 0.75rem;
+		color: var(--text-secondary);
+		cursor: pointer;
+		white-space: nowrap;
 	}
 	
 	.empty-text { font-size: 0.875rem; color: var(--text-muted); font-style: italic; }

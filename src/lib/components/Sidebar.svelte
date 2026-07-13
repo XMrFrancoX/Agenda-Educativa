@@ -16,6 +16,7 @@
 			id: string;
 			full_name: string | null;
 			role: 'teacher' | 'director' | 'admin' | 'superadmin' | 'student' | 'tutor';
+			extra_roles?: string[];
 			school_id: string;
 			phone: string | null;
 			avatar_url: string | null;
@@ -52,7 +53,7 @@
 	}
 
 	function avatarColor(role: string) {
-		if (role === 'director') return 'linear-gradient(135deg, #7c3aed, #2563eb)';
+		if (role === 'director') return 'linear-gradient(135deg, #7c3aed, #0a3055)';
 		if (role === 'teacher') return 'linear-gradient(135deg, #0891b2, #0369a1)';
 		if (role === 'admin') return 'linear-gradient(135deg, #f59e0b, #d97706)';
 		if (role === 'superadmin') return 'linear-gradient(135deg, #ea580c, #c2410c)';
@@ -88,18 +89,53 @@
 	];
 
 	const currentPath = $derived($page.url.pathname);
-	const userRole = $derived(profile?.role ?? 'teacher');
+
+	// Roles adicionales (ej. un director que también da clases) permiten
+	// "actuar como" otro rol — solo cambia qué ve acá en el sidebar, no los
+	// permisos reales de la cuenta (esos siguen siendo los de profile.role
+	// a nivel de RLS). La elección se guarda en localStorage por usuario.
+	const availableRoles = $derived(
+		profile ? [profile.role, ...(profile.extra_roles ?? [])] : []
+	);
+	let activeRole = $state<string | null>(null);
+	const userRole = $derived(activeRole ?? profile?.role ?? 'teacher');
+
 	const visibleGroups = $derived(
 		navGroups
 			.map((group) => ({ ...group, items: group.items.filter((item) => item.roles.includes(userRole)) }))
 			.filter((group) => group.items.length > 0)
 	);
 
+	function loadActiveRole() {
+		if (!profile) return;
+		try {
+			const stored = localStorage.getItem(`activeRole:${profile.id}`);
+			activeRole = stored && availableRoles.includes(stored) ? stored : profile.role;
+		} catch {
+			activeRole = profile.role;
+		}
+	}
+
+	function switchRole(role: string) {
+		activeRole = role;
+		if (profile) {
+			try {
+				localStorage.setItem(`activeRole:${profile.id}`, role);
+			} catch {
+				// localStorage puede no estar disponible — no es crítico.
+			}
+		}
+		// Volver al calendario: evita quedar en una pantalla que el nuevo
+		// rol activo no debería ver (ej. /admin al pasar a "Docente").
+		goto('/calendario');
+	}
+
 	let mobileOpen = $state(false);
 	let theme = $state<Theme>('light');
 
 	onMount(() => {
 		theme = getInitialTheme();
+		loadActiveRole();
 	});
 
 	function toggleTheme() {
@@ -149,9 +185,9 @@
 			<img src={profile.school_logo_url} alt="Logo" class="mobile-brand-logo" />
 		{:else}
 			<svg width="22" height="22" viewBox="0 0 32 32" fill="none">
-				<rect width="32" height="32" rx="9" fill="#2563eb"/>
+				<rect width="32" height="32" rx="9" fill="#0a3055"/>
 				<path d="M8 12h16M8 16h10M8 20h13" stroke="white" stroke-width="2" stroke-linecap="round"/>
-				<circle cx="24" cy="10" r="4" fill="#7c3aed"/>
+				<circle cx="24" cy="10" r="4" fill="#f59d1e"/>
 			</svg>
 		{/if}
 		<span class="mobile-brand-name">Agenda Educativa</span>
@@ -186,9 +222,9 @@
 				<img src={profile.school_logo_url} alt="Logo" class="custom-school-logo" />
 			{:else}
 				<svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-					<rect width="32" height="32" rx="9" fill="#2563eb"/>
+					<rect width="32" height="32" rx="9" fill="#0a3055"/>
 					<path d="M8 12h16M8 16h10M8 20h13" stroke="white" stroke-width="2" stroke-linecap="round"/>
-					<circle cx="24" cy="10" r="4" fill="#7c3aed"/>
+					<circle cx="24" cy="10" r="4" fill="#f59d1e"/>
 				</svg>
 			{/if}
 		</div>
@@ -235,6 +271,25 @@
 
 	<div class="sidebar-spacer"></div>
 
+	<!-- Switch de rol activo (solo si el usuario tiene más de un rol asignado) -->
+	{#if availableRoles.length > 1}
+		<div class="role-switch">
+			<span class="role-switch-label">Viendo como</span>
+			<div class="role-switch-options">
+				{#each availableRoles as r}
+					<button
+						type="button"
+						class="role-switch-pill"
+						class:active={userRole === r}
+						onclick={() => switchRole(r)}
+					>
+						{roleLabel[r]}
+					</button>
+				{/each}
+			</div>
+		</div>
+	{/if}
+
 	<!-- User Profile -->
 	{#if profile}
 		<div class="sidebar-profile">
@@ -247,8 +302,8 @@
 			</div>
 			<div class="profile-info">
 				<span class="profile-name">{profile.full_name ?? 'Usuario'}</span>
-				<span class="badge {roleClass[profile.role]} profile-role-badge">
-					{roleLabel[profile.role]}
+				<span class="badge {roleClass[userRole]} profile-role-badge">
+					{roleLabel[userRole]}
 				</span>
 			</div>
 		</div>
@@ -290,7 +345,7 @@
 	}
 	.brand-logo {
 		flex-shrink: 0;
-		filter: drop-shadow(0 0 8px light-dark(rgba(37,99,235,0.25), rgba(59,130,246,0.4)));
+		filter: drop-shadow(0 0 8px light-dark(rgba(10,48,85,0.25), rgba(245,157,30,0.4)));
 	}
 	.custom-school-logo {
 		width: 28px;
@@ -378,6 +433,43 @@
 
 	.sidebar-spacer { flex: 1; }
 
+	/* Role switch */
+	.role-switch {
+		padding: 0.5rem 0.75rem;
+		margin-bottom: 0.5rem;
+	}
+	.role-switch-label {
+		display: block;
+		font-size: 0.6875rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: var(--text-muted);
+		margin-bottom: 0.375rem;
+	}
+	.role-switch-options {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.375rem;
+	}
+	.role-switch-pill {
+		font-size: 0.75rem;
+		font-weight: 500;
+		padding: 0.25rem 0.625rem;
+		border-radius: 999px;
+		border: 1px solid var(--border-default);
+		background: none;
+		color: var(--text-secondary);
+		cursor: pointer;
+		transition: all var(--transition-fast);
+	}
+	.role-switch-pill:hover { border-color: var(--border-strong); color: var(--text-primary); }
+	.role-switch-pill.active {
+		background: var(--color-primary);
+		border-color: var(--color-primary);
+		color: var(--text-on-primary);
+	}
+
 	/* Profile */
 	.sidebar-profile {
 		display: flex;
@@ -440,8 +532,8 @@
 		font-family: inherit;
 	}
 	.logout-btn:hover {
-		background: light-dark(rgba(220, 38, 38, 0.08), rgba(239, 68, 68, 0.1));
-		color: light-dark(#b91c1c, #fca5a5);
+		background: color-mix(in srgb, var(--color-danger) 8%, transparent);
+		color: var(--color-danger);
 	}
 
 	/* Mobile top bar + drawer */

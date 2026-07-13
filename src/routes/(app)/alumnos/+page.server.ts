@@ -1,7 +1,7 @@
 import type { PageServerLoad, Actions } from './$types';
 import { fail, redirect } from '@sveltejs/kit';
-import { env } from '$env/dynamic/private';
 import { createSupabaseAdminClient } from '$lib/supabase.server';
+import { sendInviteEmail } from '$lib/server/invites';
 
 export const load: PageServerLoad = async ({ locals: { profile } }) => {
 	if (profile?.role !== 'director' && profile?.role !== 'admin' && profile?.role !== 'superadmin') {
@@ -18,6 +18,22 @@ export const load: PageServerLoad = async ({ locals: { profile } }) => {
 		.in('role', ['student', 'tutor']);
 
 	if (studentsError) console.error('Students load error:', studentsError.message);
+
+	// Marcar cuentas que nunca iniciaron sesión (invitación pendiente, típicamente
+	// porque el mail nunca llegó) para poder ofrecer "Reenviar invitación".
+	let pendingIds = new Set<string>();
+	if (students && students.length > 0) {
+		const { data: usersPage, error: listUsersError } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
+		if (listUsersError) {
+			console.error('listUsers error:', listUsersError.message);
+		} else {
+			const studentIds = new Set(students.map((s) => s.id));
+			pendingIds = new Set(
+				usersPage.users.filter((u) => studentIds.has(u.id) && !u.last_sign_in_at).map((u) => u.id)
+			);
+		}
+	}
+	const studentsWithStatus = (students ?? []).map((s) => ({ ...s, pending: pendingIds.has(s.id) }));
 
 	// Cargar docentes de la escuela (para asignarlos como profesores responsables de un curso)
 	const { data: teachers, error: teachersError } = await adminClient
@@ -44,7 +60,7 @@ export const load: PageServerLoad = async ({ locals: { profile } }) => {
 	if (coursesError) console.error('Courses load error:', coursesError.message);
 
 	return {
-		students: students ?? [],
+		students: studentsWithStatus,
 		teachers: teachers ?? [],
 		courses: courses ?? []
 	};
@@ -122,44 +138,47 @@ export const actions: Actions = {
 		}
 
 		const actionLink = data.properties?.action_link;
-		if (actionLink && env.RESEND_API_KEY) {
+		if (actionLink) {
 			const roleLabel = role === 'student' ? 'Alumno/a' : 'Tutor/a';
-			try {
-				const res = await fetch('https://api.resend.com/emails', {
-					method: 'POST',
-					headers: {
-						'Authorization': `Bearer ${env.RESEND_API_KEY}`,
-						'Content-Type': 'application/json'
-					},
-					body: JSON.stringify({
-						from: env.EMAIL_FROM || 'Agenda Educativa <onboarding@resend.dev>',
-						to: email,
-						reply_to: 'nmfsoluciones@gmail.com',
-						subject: 'Te invitaron a Agenda Educativa',
-						html: `
-							<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
-								<h2 style="color: #111827; text-align: center;">Bienvenido/a a Agenda Educativa</h2>
-								<p style="color: #4b5563; line-height: 1.5;">Hola ${fullName},</p>
-								<p style="color: #4b5563; line-height: 1.5;">Te invitaron a sumarte a Agenda Educativa como <strong>${roleLabel}</strong>. Hacé clic en el siguiente botón para crear tu contraseña y acceder.</p>
-								<div style="text-align: center; margin: 30px 0;">
-									<a href="${actionLink}" style="display: inline-block; padding: 12px 24px; background-color: #6366f1; color: white; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">Crear mi contraseña</a>
-								</div>
-								<p style="color: #4b5563; line-height: 1.5; font-size: 14px;">Si el botón no funciona, copiá y pegá este enlace en tu navegador:</p>
-								<p style="color: #6366f1; word-break: break-all; font-size: 14px;">${actionLink}</p>
-							</div>
-						`
-					})
-				});
-				if (!res.ok) {
-					const errText = await res.text();
-					console.error('inviteMember Resend error:', res.status, errText);
-				}
-			} catch (err) {
-				console.error('inviteMember Resend exception:', err);
-			}
+			await sendInviteEmail(fullName, email, roleLabel, actionLink);
 		}
 
 		return { success: true };
+	},
+
+	resendInvite: async ({ request, url, locals: { profile } }) => {
+		if (profile?.role !== 'director' && profile?.role !== 'admin' && profile?.role !== 'superadmin') {
+			return fail(403, { error: 'No autorizado.' });
+		}
+
+		const formData = await request.formData();
+		const userId = formData.get('user_id') as string;
+		const email = formData.get('email') as string;
+		const fullName = (formData.get('full_name') as string) || 'Usuario';
+		const role = formData.get('role') as string;
+
+		if (!userId || !email) return fail(400, { error: 'Datos incompletos.' });
+
+		const adminClient = createSupabaseAdminClient();
+
+		// La cuenta ya existe (se creó en la invitación original) — 'recovery'
+		// genera un link válido para setear contraseña sin volver a crear el
+		// usuario ni requerir que el invite original siga sin usarse.
+		const { data, error } = await adminClient.auth.admin.generateLink({
+			type: 'recovery',
+			email,
+			options: { redirectTo: `${url.origin}/update-password` }
+		});
+
+		if (error || !data.properties?.action_link) {
+			console.error('resendInvite generateLink error:', error);
+			return fail(500, { error: `No se pudo reenviar: ${error?.message ?? 'error desconocido'}` });
+		}
+
+		const roleLabel = role === 'student' ? 'Alumno/a' : 'Tutor/a';
+		await sendInviteEmail(fullName, email, roleLabel, data.properties.action_link);
+
+		return { success: true, resent: true };
 	},
 
 	addMember: async ({ request, locals: { profile } }) => {

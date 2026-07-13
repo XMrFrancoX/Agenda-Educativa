@@ -18,6 +18,7 @@ export const load: PageServerLoad = async ({ locals: { supabase, profile } }) =>
 			full_name,
 			email,
 			role,
+			extra_roles,
 			school_id,
 			schools ( name )
 		`)
@@ -39,15 +40,18 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const targetUserId = formData.get('user_id') as string;
 		const role = formData.get('role') as string;
+		// Roles adicionales: solo cambian qué ve el usuario en el sidebar
+		// (ver Sidebar.svelte), no otorgan permisos nuevos a nivel de RLS.
+		const extraRoles = formData.getAll('extra_roles') as string[];
 
 		if (!targetUserId) return fail(400, { error: 'ID de usuario requerido.' });
 		if (role === 'superadmin') return fail(403, { error: 'No autorizado a otorgar rol superadmin' });
 
-		// El admin solo puede modificar usuarios de su propia escuela. 
+		// El admin solo puede modificar usuarios de su propia escuela.
 		// Forzamos la actualización asegurando que target coincida con su school_id.
 		const { error } = await supabase
 			.from('profiles')
-			.update({ role })
+			.update({ role, extra_roles: extraRoles.filter((r) => r !== role) })
 			.eq('id', targetUserId)
 			.eq('school_id', profile.school_id); // Security: only update if user belongs to same school
 

@@ -17,6 +17,7 @@ npm-debug.log*
 # Ignorar archivos SQL (migraciones, dumps, etc.)
 *.sql
 supabase/migrations/
+supabase/.temp/
 scratch/
 
 # Editores / SO

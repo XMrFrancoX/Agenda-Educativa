@@ -47,7 +47,7 @@
 
 	let showNewCat = $state(false);
 	let newCatName = $state('');
-	let newCatColor = $state('#2563eb');
+	let newCatColor = $state('#0a3055');
 	let creatingCat = $state(false);
 
 	function formatDatetimeLocal(dateStr: string, defaultTime: string) {
@@ -142,6 +142,7 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="dialog-backdrop" onclick={handleBackdropClick}>
 		<div class="dialog event-dialog" role="dialog" aria-modal="true" aria-labelledby="event-dialog-title">
+		<div class="dialog-scroll">
 			<div class="dialog-header">
 				<h2 class="dialog-title" id="event-dialog-title">
 					{isEditing ? 'Editar Evento' : 'Nuevo Evento'}
@@ -361,7 +362,7 @@
 					</div>
 					{#if (!groups || groups.length === 0) && (!courses || courses.length === 0)}
 						<p class="hint-text">
-							💡 Para usar visibilidad por grupo o curso, primero creá grupos en la sección
+							Para usar visibilidad por grupo o curso, primero creá grupos en la sección
 							<a href="/staff" class="link-inline">Staff</a> o cursos en
 							<a href="/alumnos" class="link-inline">Alumnos y Tutores</a>.
 						</p>
@@ -391,7 +392,7 @@
 					</div>
 					{#if !courses || courses.length === 0}
 						<p class="hint-text">
-							💡 Para notificar a un curso de alumnos, pedile a un director que cree uno en
+							Para notificar a un curso de alumnos, pedile a un director que cree uno en
 							<a href="/alumnos" class="link-inline">Alumnos y Tutores</a>.
 						</p>
 					{/if}
@@ -422,6 +423,7 @@
 					</button>
 				</div>
 			</form>
+			</div>
 		</div>
 	</div>
 {/if}

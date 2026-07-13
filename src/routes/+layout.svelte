@@ -82,6 +82,8 @@
 	{/if}
 </svelte:head>
 
+<Toaster richColors position="top-right" closeButton />
+
 {#if !hasSidebar}
 	<button
 		type="button"

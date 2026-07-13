@@ -4,8 +4,10 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
+	// Puerto fijo para poder correr esto y Landing Page (5173) en paralelo
+	// sin que uno le pise el puerto al otro.
 	server: {
-		port: 5173,
-		strictPort: false
+		port: 5174,
+		strictPort: true
 	}
 });

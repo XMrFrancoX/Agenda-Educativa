@@ -42,6 +42,7 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="dialog-backdrop" onclick={handleBackdrop}>
 		<div class="dialog detail-dialog" role="dialog" aria-modal="true">
+		<div class="dialog-scroll">
 			<!-- Color bar from category -->
 			{#if event.event_categories?.color}
 				<div class="event-color-bar" style="background: {event.event_categories.color}"></div>
@@ -228,6 +229,7 @@
 					</form>
 				</div>
 			{/if}
+			</div>
 		</div>
 	</div>
 {/if}

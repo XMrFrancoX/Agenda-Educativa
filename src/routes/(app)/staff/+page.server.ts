@@ -1,6 +1,7 @@
 import type { PageServerLoad, Actions } from './$types';
 import { fail, redirect } from '@sveltejs/kit';
 import { createSupabaseAdminClient } from '$lib/supabase.server';
+import { sendInviteEmail } from '$lib/server/invites';
 
 export const load: PageServerLoad = async ({ locals: { supabase, profile } }) => {
 	if (profile?.role !== 'director' && profile?.role !== 'admin' && profile?.role !== 'superadmin') {
@@ -18,6 +19,21 @@ export const load: PageServerLoad = async ({ locals: { supabase, profile } }) =>
 
 	if (teacherError) console.error('Teachers load error:', teacherError.message);
 
+	// Marcar cuentas que nunca iniciaron sesión, para ofrecer "Reenviar invitación".
+	let pendingIds = new Set<string>();
+	if (teachers && teachers.length > 0) {
+		const { data: usersPage, error: listUsersError } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
+		if (listUsersError) {
+			console.error('listUsers error:', listUsersError.message);
+		} else {
+			const teacherIds = new Set(teachers.map((t) => t.id));
+			pendingIds = new Set(
+				usersPage.users.filter((u) => teacherIds.has(u.id) && !u.last_sign_in_at).map((u) => u.id)
+			);
+		}
+	}
+	const teachersWithStatus = (teachers ?? []).map((t) => ({ ...t, pending: pendingIds.has(t.id) }));
+
 	// Cargar grupos con miembros usando adminClient
 	const { data: groups, error: groupError } = await adminClient
 		.from('staff_groups')
@@ -34,12 +50,92 @@ export const load: PageServerLoad = async ({ locals: { supabase, profile } }) =>
 	if (groupError) console.error('Groups load error:', groupError.message);
 
 	return {
-		teachers: teachers ?? [],
+		teachers: teachersWithStatus,
 		groups: groups ?? []
 	};
 };
 
 export const actions: Actions = {
+	inviteMember: async ({ request, url, locals: { profile } }) => {
+		if (profile?.role !== 'director' && profile?.role !== 'admin' && profile?.role !== 'superadmin') {
+			return fail(403, { error: 'No autorizado.' });
+		}
+		if (!profile?.school_id) return fail(403, { error: 'Sin escuela asignada.' });
+
+		const formData = await request.formData();
+		const fullName = formData.get('full_name') as string;
+		const email = formData.get('email') as string;
+		const role = formData.get('role') as string;
+
+		if (!fullName || !email) return fail(400, { error: 'Nombre y email son obligatorios.' });
+		if (role !== 'teacher' && role !== 'director') return fail(400, { error: 'Rol inválido.' });
+
+		const adminClient = createSupabaseAdminClient();
+
+		const { data, error } = await adminClient.auth.admin.generateLink({
+			type: 'invite',
+			email,
+			options: {
+				redirectTo: `${url.origin}/update-password`,
+				data: { full_name: fullName, role }
+			}
+		});
+
+		if (error || !data?.user) {
+			console.error('inviteMember generateLink error:', error);
+			return fail(500, { error: `No se pudo invitar: ${error?.message ?? 'error desconocido'}` });
+		}
+
+		const { error: updateError } = await adminClient
+			.from('profiles')
+			.update({ school_id: profile.school_id, role })
+			.eq('id', data.user.id);
+
+		if (updateError) {
+			console.error('inviteMember profile update error:', updateError);
+			return fail(500, { error: 'Se creó el usuario pero no se pudo asignar a la escuela.' });
+		}
+
+		const actionLink = data.properties?.action_link;
+		if (actionLink) {
+			const roleLabel = role === 'director' ? 'Director/a' : 'Docente';
+			await sendInviteEmail(fullName, email, roleLabel, actionLink);
+		}
+
+		return { success: true };
+	},
+
+	resendInvite: async ({ request, url, locals: { profile } }) => {
+		if (profile?.role !== 'director' && profile?.role !== 'admin' && profile?.role !== 'superadmin') {
+			return fail(403, { error: 'No autorizado.' });
+		}
+
+		const formData = await request.formData();
+		const email = formData.get('email') as string;
+		const fullName = (formData.get('full_name') as string) || 'Usuario';
+		const role = formData.get('role') as string;
+
+		if (!email) return fail(400, { error: 'Datos incompletos.' });
+
+		const adminClient = createSupabaseAdminClient();
+
+		const { data, error } = await adminClient.auth.admin.generateLink({
+			type: 'recovery',
+			email,
+			options: { redirectTo: `${url.origin}/update-password` }
+		});
+
+		if (error || !data.properties?.action_link) {
+			console.error('resendInvite generateLink error:', error);
+			return fail(500, { error: `No se pudo reenviar: ${error?.message ?? 'error desconocido'}` });
+		}
+
+		const roleLabel = role === 'director' ? 'Director/a' : 'Docente';
+		await sendInviteEmail(fullName, email, roleLabel, data.properties.action_link);
+
+		return { success: true };
+	},
+
 	createGroup: async ({ request, locals: { supabase, profile } }) => {
 		if (profile?.role !== 'director' && profile?.role !== 'admin' && profile?.role !== 'superadmin') {
 			return fail(403, { error: 'No autorizado.' });

@@ -38,13 +38,16 @@
 :root[data-theme='dark']  { color-scheme: dark; }
 
 :root {
-  /* Brand Colors */
-  --color-primary:           light-dark(#2563eb, #3b82f6); /* Blue 600 / 500 */
-  --color-primary-hover:     light-dark(#1d4ed8, #2563eb); /* Blue 700 / 600 */
-  --color-primary-light:     light-dark(#1d4ed8, #93c5fd); /* texto sobre fondo primario tenue */
-  --color-primary-alpha-12:  light-dark(rgba(37,99,235,0.12), rgba(59,130,246,0.16));
-  --color-secondary:         light-dark(#7c3aed, #8b5cf6); /* Violet */
-  --color-accent:            light-dark(#0891b2, #06b6d4); /* Cyan */
+  /* Brand Colors — paleta NMF (mismo azul/naranja del logo que Landing
+     Page); en dark mode se invierte primary/accent para mantener
+     contraste sobre fondos casi negros, igual que ya lo tenía definido
+     (sin usar) el layout.css de Landing Page. */
+  --color-primary:           light-dark(#0a3055, #f59d1e); /* Azul NMF / Naranja NMF */
+  --color-primary-hover:     light-dark(#082846, #e08c0a);
+  --color-primary-light:     light-dark(#0a3055, #fcd34d); /* texto sobre fondo primario tenue */
+  --color-primary-alpha-12:  light-dark(rgba(10,48,85,0.12), rgba(245,157,30,0.16));
+  --color-secondary:         light-dark(#fbb117, #d97706); /* Amarillo/naranja NMF */
+  --color-accent:            light-dark(#f59d1e, #fb923c); /* Naranja vibrante del logo */
   --color-success:           light-dark(#059669, #10b981); /* Emerald */
   --color-warning:           light-dark(#b45309, #f59e0b); /* Amber */
   --color-danger:            light-dark(#dc2626, #ef4444); /* Red */
@@ -60,7 +63,7 @@
   --text-primary:     light-dark(#0f172a, #e2e8f0);
   --text-secondary:   light-dark(#475569, #94a3b8);
   --text-muted:       light-dark(#94a3b8, #64748b);
-  --text-on-primary:  #ffffff;
+  --text-on-primary:  light-dark(#ffffff, #020817); /* blanco sobre azul / navy sobre naranja */
 
   /* Borders */
   --border-subtle:    light-dark(rgba(15, 23, 42, 0.08), rgba(255, 255, 255, 0.06));
@@ -202,13 +205,13 @@ a:hover { color: var(--color-secondary); }
 
 .btn-primary {
   background: var(--color-primary);
-  color: white;
+  color: var(--text-on-primary);
   border-color: var(--color-primary);
 }
 .btn-primary:hover {
   background: var(--color-primary-hover);
   border-color: var(--color-primary-hover);
-  box-shadow: var(--shadow-glow);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-ghost {
@@ -368,13 +371,22 @@ select.input option { background: var(--bg-elevated); }
   background: var(--bg-elevated);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-xl);
-  padding: 2rem;
   width: 100%;
   max-width: 520px;
   max-height: 90vh;
-  overflow-y: auto;
+  /* El scroll vive en .dialog-scroll (adentro), no acá — así el propio
+     border-radius recorta la barra de scroll en vez de que se salga del
+     recuadro redondeado (pasaba con overflow-y directo en este mismo
+     elemento). */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   box-shadow: var(--shadow-lg);
   animation: slideUp var(--transition-base) ease;
+}
+.dialog-scroll {
+  overflow-y: auto;
+  padding: 2rem;
 }
 .dialog-header {
   display: flex;
@@ -527,7 +539,7 @@ select.input option { background: var(--bg-elevated); }
   --fc-button-hover-border-color: var(--border-strong);
   --fc-button-active-bg-color: var(--color-primary);
   --fc-button-active-border-color: var(--color-primary);
-  --fc-today-bg-color: light-dark(rgba(37,99,235,0.06), rgba(59,130,246,0.08));
+  --fc-today-bg-color: light-dark(rgba(10,48,85,0.06), rgba(245,157,30,0.10));
   --fc-page-bg-color: transparent;
   --fc-neutral-bg-color: var(--bg-surface);
   --fc-list-event-hover-bg-color: var(--bg-overlay);
@@ -554,7 +566,7 @@ select.input option { background: var(--bg-elevated); }
 }
 .fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
   background: var(--color-primary);
-  color: white;
+  color: var(--text-on-primary);
   border-radius: 50%;
   width: 24px;
   height: 24px;
@@ -588,7 +600,7 @@ select.input option { background: var(--bg-elevated); }
 }
 .fc .fc-button-primary.fc-button-active {
   background: var(--color-primary) !important;
-  color: white !important;
+  color: var(--text-on-primary) !important;
 }
 .fc th { border-color: var(--border-subtle) !important; }
 .fc td { border-color: var(--border-subtle) !important; }
