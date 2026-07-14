@@ -1,227 +1,63 @@
 import type { PageServerLoad, Actions } from './$types';
 import { fail, redirect } from '@sveltejs/kit';
+import { createSupabaseAdminClient } from '$lib/supabase.server';
 
 export const load: PageServerLoad = async ({ locals: { supabase, profile } }) => {
-	// Verificar que el usuario tenga rol 'admin'
-	if (profile?.role !== 'admin') {
+	// Verificar que el usuario tenga rol 'admin' o 'superadmin'
+	if (profile?.role !== 'admin' && profile?.role !== 'superadmin') {
 		throw redirect(303, '/calendario');
 	}
 
-	// Obtener la lista completa de escuelas
-	const { data: schools } = await supabase
-		.from('schools')
-		.select('*')
-		.order('name');
+	const schoolId = profile.school_id;
 
-	// Obtener la lista de todos los perfiles en la base de datos
-	const { data: profiles } = await supabase
+	const adminClient = createSupabaseAdminClient();
+	const { data: profiles } = await adminClient
 		.from('profiles')
 		.select(`
 			id,
 			full_name,
 			email,
 			role,
+			extra_roles,
 			school_id,
 			schools ( name )
 		`)
+		.eq('school_id', schoolId)
 		.order('created_at', { ascending: false });
 
 	return {
-		schools: schools ?? [],
+		schools: [],
 		profiles: profiles ?? []
 	};
 };
 
 export const actions: Actions = {
-	createSchool: async ({ request, locals: { supabase, profile } }) => {
-		if (profile?.role !== 'admin') return fail(403, { error: 'No autorizado' });
-
-		const formData = await request.formData();
-		const name = formData.get('name') as string;
-		
-		if (!name || name.trim() === '') {
-			return fail(400, { error: 'El nombre de la escuela es obligatorio.' });
-		}
-
-		const { error } = await supabase
-			.from('schools')
-			.insert({ name });
-
-		if (error) {
-			console.error('Error creating school:', error);
-			return fail(500, { error: 'No se pudo crear la escuela.' });
-		}
-		
-		return { success: true };
-	},
-
 	updateUser: async ({ request, locals: { supabase, profile } }) => {
-		if (profile?.role !== 'admin') return fail(403, { error: 'No autorizado' });
+		if (profile?.role !== 'admin' && profile?.role !== 'superadmin') {
+			return fail(403, { error: 'No autorizado' });
+		}
 
 		const formData = await request.formData();
 		const targetUserId = formData.get('user_id') as string;
 		const role = formData.get('role') as string;
-		let schoolId = formData.get('school_id') as string | null;
+		// Roles adicionales: solo cambian qué ve el usuario en el sidebar
+		// (ver Sidebar.svelte), no otorgan permisos nuevos a nivel de RLS.
+		const extraRoles = formData.getAll('extra_roles') as string[];
 
 		if (!targetUserId) return fail(400, { error: 'ID de usuario requerido.' });
-		
-		// Si se seleccionó "Ninguna" (vacío), enviamos null a la BD
-		if (schoolId === '') {
-			schoolId = null;
-		}
+		if (role === 'superadmin') return fail(403, { error: 'No autorizado a otorgar rol superadmin' });
 
+		// El admin solo puede modificar usuarios de su propia escuela.
+		// Forzamos la actualización asegurando que target coincida con su school_id.
 		const { error } = await supabase
 			.from('profiles')
-			.update({ role, school_id: schoolId })
-			.eq('id', targetUserId);
+			.update({ role, extra_roles: extraRoles.filter((r) => r !== role) })
+			.eq('id', targetUserId)
+			.eq('school_id', profile.school_id); // Security: only update if user belongs to same school
 
 		if (error) {
 			console.error('Error updating user:', error);
 			return fail(500, { error: 'No se pudo actualizar el usuario.' });
-		}
-
-		return { success: true };
-	},
-
-	uploadLogo: async ({ request, locals: { supabase, profile } }) => {
-		if (profile?.role !== 'admin') return fail(403, { error: 'No autorizado' });
-
-		const formData = await request.formData();
-		const schoolId = formData.get('school_id') as string;
-		const file = formData.get('logo') as File;
-
-		if (!schoolId || !file || file.size === 0) {
-			return fail(400, { error: 'Faltan datos o archivo inválido.' });
-		}
-
-		// Validar extensión
-		const ext = file.name.split('.').pop()?.toLowerCase();
-		if (!['jpg', 'jpeg', 'png', 'webp', 'svg'].includes(ext ?? '')) {
-			return fail(400, { error: 'Formato de imagen no soportado.' });
-		}
-
-		const fileName = `${schoolId}-${Date.now()}.${ext}`;
-
-		const { data: uploadData, error: uploadError } = await supabase.storage
-			.from('school_logos')
-			.upload(fileName, file, {
-				cacheControl: '3600',
-				upsert: false
-			});
-
-		if (uploadError) {
-			console.error('Error subiendo logo:', uploadError);
-			return fail(500, { error: 'No se pudo subir la imagen.' });
-		}
-
-		const { data: publicUrlData } = supabase.storage
-			.from('school_logos')
-			.getPublicUrl(fileName);
-
-		const { error: updateError } = await supabase
-			.from('schools')
-			.update({ logo_url: publicUrlData.publicUrl })
-			.eq('id', schoolId);
-
-		if (updateError) {
-			return fail(500, { error: 'No se pudo vincular el logo a la escuela.' });
-		}
-
-		return { success: true };
-	},
-
-	toggleSchoolStatus: async ({ request, locals: { supabase, profile } }) => {
-		if (profile?.role !== 'admin') return fail(403, { error: 'No autorizado' });
-
-		const formData = await request.formData();
-		const schoolId = formData.get('school_id') as string;
-		const currentStatus = formData.get('current_status') as string;
-
-		if (!schoolId) return fail(400, { error: 'ID de escuela requerido.' });
-
-		const newStatus = currentStatus === 'suspended' ? 'active' : 'suspended';
-
-		const { error } = await supabase
-			.from('schools')
-			.update({ status: newStatus })
-			.eq('id', schoolId);
-
-		if (error) {
-			return fail(500, { error: 'No se pudo cambiar el estado de la escuela.' });
-		}
-
-		return { success: true };
-	},
-
-	deleteSchool: async ({ request, locals: { supabase, profile } }) => {
-		if (profile?.role !== 'admin') return fail(403, { error: 'No autorizado' });
-
-		const formData = await request.formData();
-		const schoolId = formData.get('school_id') as string;
-
-		if (!schoolId) return fail(400, { error: 'ID de escuela requerido.' });
-
-		// La base de datos debe estar configurada con ON DELETE CASCADE
-		const { error } = await supabase
-			.from('schools')
-			.delete()
-			.eq('id', schoolId);
-
-		if (error) {
-			console.error('Error eliminando escuela:', error);
-			return fail(500, { error: 'No se pudo eliminar la escuela. Verifique que no haya datos huérfanos.' });
-		}
-
-		return { success: true };
-	},
-
-	updateColor: async ({ request, locals: { supabase, profile } }) => {
-		if (profile?.role !== 'admin') return fail(403, { error: 'No autorizado' });
-
-		const formData = await request.formData();
-		const schoolId = formData.get('school_id') as string;
-		const color = formData.get('color') as string;
-
-		if (!schoolId) return fail(400, { error: 'ID de escuela requerido.' });
-
-		const { error } = await supabase
-			.from('schools')
-			.update({ primary_color: color || null })
-			.eq('id', schoolId);
-
-		if (error) {
-			return fail(500, { error: 'No se pudo actualizar el color.' });
-		}
-
-		return { success: true };
-	},
-
-	updateDomain: async ({ request, locals: { supabase, profile } }) => {
-		if (profile?.role !== 'admin') return fail(403, { error: 'No autorizado' });
-
-		const formData = await request.formData();
-		const schoolId = formData.get('school_id') as string;
-		let domain = formData.get('domain') as string;
-
-		if (!schoolId) return fail(400, { error: 'ID de escuela requerido.' });
-
-		// Limpiar el dominio (quitar https://, espacios, etc)
-		if (domain) {
-			domain = domain.trim().toLowerCase();
-			domain = domain.replace(/^https?:\/\//, '');
-			domain = domain.replace(/\/$/, '');
-		}
-
-		const { error } = await supabase
-			.from('schools')
-			.update({ custom_domain: domain || null })
-			.eq('id', schoolId);
-
-		if (error) {
-			if (error.code === '23505') {
-				return fail(400, { error: 'Este dominio ya está registrado por otra escuela.' });
-			}
-			return fail(500, { error: 'No se pudo actualizar el dominio.' });
 		}
 
 		return { success: true };

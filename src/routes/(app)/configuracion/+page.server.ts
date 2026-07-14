@@ -14,7 +14,20 @@ export const load: PageServerLoad = async ({ locals: { supabase, profile, safeGe
 		.select('*')
 		.order('name');
 
-	return { profile, user, preferences, categories: categories ?? [] };
+	const defaultPreferences = {
+		show_teacher_events: false,
+		notify_email: true,
+		notify_whatsapp: false,
+		notify_24h: true,
+		notify_1h: true
+	};
+
+	return { 
+		profile, 
+		user, 
+		preferences: preferences ?? defaultPreferences, 
+		categories: categories ?? [] 
+	};
 };
 
 export const actions = {
@@ -40,6 +53,28 @@ export const actions = {
 			console.error('Create category error:', error);
 			return { success: false, error: 'No se pudo crear la categoría.' };
 		}
+		return { success: true };
+	},
+	updatePhone: async ({ request, locals: { supabase, user } }) => {
+		if (!user) return { success: false, error: 'No autorizado' };
+		const formData = await request.formData();
+		let phone = formData.get('phone') as string;
+		
+		// Clean phone input (only digits and +)
+		if (phone) {
+			phone = phone.replace(/[^\d+]/g, '');
+		}
+		
+		const { error } = await supabase
+			.from('profiles')
+			.update({ phone: phone || null })
+			.eq('id', user.id);
+			
+		if (error) {
+			console.error('Update phone error:', error);
+			return { success: false, error: 'No se pudo actualizar el teléfono.' };
+		}
+		
 		return { success: true };
 	}
 };

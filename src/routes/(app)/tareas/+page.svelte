@@ -13,10 +13,11 @@
 	let creating = $state(false);
 	let formError = $state('');
 
-	import { Clock, RefreshCw, CheckCircle2 } from 'lucide-svelte';
+	import { Clock, RefreshCw, CheckCircle2, AlertCircle } from '@lucide/svelte';
+	import { Alert, AlertDescription } from '$lib/components/ui/alert';
 
 	const columns = [
-		{ key: 'pending',     label: 'Pendiente',    color: '#6366f1', icon: Clock },
+		{ key: 'pending',     label: 'Pendiente',    color: '#0a3055', icon: Clock },
 		{ key: 'in_progress', label: 'En Progreso',  color: '#f59e0b', icon: RefreshCw },
 		{ key: 'done',        label: 'Completado',   color: '#10b981', icon: CheckCircle2 }
 	] as const;
@@ -98,11 +99,12 @@
 	<!-- Kanban board -->
 	<div class="kanban-board">
 		{#each columns as col}
+			{@const Icon = col.icon}
 			<div class="kanban-column">
 				<!-- Column header -->
 				<div class="kanban-column-header" style="border-top: 3px solid {col.color}">
 					<span class="kanban-column-title" style="color: {col.color}; display: flex; align-items: center; gap: 0.35rem;">
-						<svelte:component this={col.icon} size="16" />
+						<Icon size="16" />
 						{col.label}
 					</span>
 					<span class="kanban-column-count">{tasksByStatus(col.key).length}</span>
@@ -184,7 +186,7 @@
 		<div class="dialog" role="dialog" aria-modal="true" aria-labelledby="create-task-title">
 			<div class="dialog-header">
 				<h2 class="dialog-title" id="create-task-title">Nueva Tarea</h2>
-				<button class="dialog-close" onclick={closeCreate}>
+				<button class="dialog-close" onclick={closeCreate} title="Cerrar ventana">
 					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 						<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
 					</svg>
@@ -192,7 +194,10 @@
 			</div>
 
 			{#if formError}
-				<div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,.25);border-radius:var(--radius-md);padding:.625rem 1rem;color:#fca5a5;font-size:.875rem;margin-bottom:1rem">{formError}</div>
+				<Alert variant="destructive" class="mb-4">
+					<AlertCircle size={16} />
+					<AlertDescription>{formError}</AlertDescription>
+				</Alert>
 			{/if}
 
 			<form method="POST" action="?/createTask" use:enhance={() => {

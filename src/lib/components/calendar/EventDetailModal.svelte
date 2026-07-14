@@ -42,6 +42,7 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="dialog-backdrop" onclick={handleBackdrop}>
 		<div class="dialog detail-dialog" role="dialog" aria-modal="true">
+		<div class="dialog-scroll">
 			<!-- Color bar from category -->
 			{#if event.event_categories?.color}
 				<div class="event-color-bar" style="background: {event.event_categories.color}"></div>
@@ -136,18 +137,56 @@
 					<div class="detail-content">
 						<span class="detail-label">Visibilidad</span>
 						<span class="detail-value">
-							{event.visibility === 'school' ? 'Toda la institución' : 'Solo yo'}
+							{#if event.visibility === 'school'}
+								Toda la institución
+							{:else if event.visibility === 'group'}
+								Grupo de Staff
+							{:else if event.visibility === 'course'}
+								Curso de alumnos
+							{:else}
+								Solo yo
+							{/if}
 						</span>
 					</div>
 				</div>
+
+				<!-- Tarea (reflejada desde el tablero de Mis Tareas) -->
+				{#if event.task_id}
+					<div class="detail-row">
+						<span class="detail-icon">
+							<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+							</svg>
+						</span>
+						<div class="detail-content">
+							<span class="detail-label">Tarea</span>
+							<span class="detail-value">
+								Prioridad {event.priority === 'high' ? 'alta' : event.priority === 'low' ? 'baja' : 'media'}
+								· {event.status === 'done' ? 'Completada' : event.status === 'in_progress' ? 'En progreso' : 'Pendiente'}
+							</span>
+						</div>
+					</div>
+				{/if}
 			</div>
 
-			<!-- Actions (only for event owner) -->
-			{#if isOwner}
+			<!-- Reunión vinculada: se gestiona desde Reuniones, no acá -->
+			{#if event.meeting_id}
+				<div class="detail-actions">
+					<a class="btn btn-ghost" href="/reuniones">
+						Gestionar en Reuniones
+					</a>
+				</div>
+			{:else if event.task_id}
+				<div class="detail-actions">
+					<a class="btn btn-ghost" href="/tareas">
+						Gestionar en Mis Tareas
+					</a>
+				</div>
+			{:else if isOwner}
 				<div class="detail-actions">
 					<button
 						class="btn btn-ghost"
-						onclick={() => { close(); onEdit?.(event!); }}
+						onclick={() => { const ev = event!; close(); onEdit?.(ev); }}
 						id="btn-edit-event"
 					>
 						<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -190,6 +229,7 @@
 					</form>
 				</div>
 			{/if}
+			</div>
 		</div>
 	</div>
 {/if}

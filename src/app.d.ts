@@ -12,13 +12,15 @@ declare global {
 			profile: {
 				id: string;
 				full_name: string | null;
-				role: 'teacher' | 'director' | 'admin' | 'student' | 'tutor';
+				role: 'teacher' | 'director' | 'admin' | 'superadmin' | 'student' | 'tutor';
+				extra_roles: string[];
 				school_id: string;
 				phone: string | null;
 				avatar_url: string | null;
 				school_logo_url?: string | null;
 				school_status?: string;
 				school_primary_color?: string | null;
+				school_whatsapp_enabled?: boolean;
 			} | null;
 			tenant: {
 				id: string;

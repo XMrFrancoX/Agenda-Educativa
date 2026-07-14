@@ -15,27 +15,64 @@
 	let selectedEvent = $state<Record<string, any> | null>(null);
 	let editingEvent = $state<Record<string, any> | null>(null);
 	let selectedDateRange = $state<{start: string, end: string, allDay: boolean} | null>(null);
-	let showTeacher = $state(data.preferences?.show_teacher_events ?? false);
+	let showTeacher = $state(false);
+
+	$effect(() => {
+		showTeacher = data.preferences?.show_teacher_events ?? false;
+	});
 	let togglingTeacher = $state(false);
+	let currentView = $state('timeGridWeek');
 
 	$effect(() => {
 		console.log('Events from DB:', data.events);
 	});
 
-	const isDirector = $derived(data.profile?.role === 'director' || data.profile?.role === 'admin');
+	const isDirector = $derived(data.profile?.role === 'director' || data.profile?.role === 'admin' || data.profile?.role === 'superadmin');
+
+	// Si sos director/admin/superadmin y tenés el toggle "Ver actividades de
+	// docentes" apagado, se ocultan del calendario los eventos creados por
+	// usuarios con rol 'teacher'.
+	const visibleEvents = $derived(
+		isDirector && !showTeacher
+			? data.events.filter((e: any) => e.profiles?.role !== 'teacher')
+			: data.events
+	);
 
 	// Map DB events → FullCalendar event format
 	function mapToFCEvents(events: typeof data.events) {
-		return events.map((e) => ({
-			id: e.id,
-			title: e.title,
-			start: e.starts_at,
-			end: e.ends_at ?? undefined,
-			allDay: e.all_day,
-			backgroundColor: (e as any).event_categories?.color ?? '#6366f1',
-			borderColor: (e as any).event_categories?.color ?? '#6366f1',
-			extendedProps: { ...e }
-		}));
+		return events.map((e) => {
+			// Remover la información de zona horaria (Z o +00:00) para forzar a FullCalendar a tratarlo como Hora Local
+			let start = e.starts_at ? e.starts_at.replace(/(Z|[+-]\d{2}:\d{2})$/, '') : e.starts_at;
+			let end = e.ends_at ? e.ends_at.replace(/(Z|[+-]\d{2}:\d{2})$/, '') : e.ends_at;
+
+			if (e.all_day) {
+				start = start.split('T')[0];
+				if (end) {
+					end = end.split('T')[0];
+					// Si es el mismo día, lo omitimos para que FullCalendar asuma 1 día por defecto.
+					if (start === end) {
+						end = undefined;
+					} else {
+						// FullCalendar asume que el 'end' es EXCLUSIVO. 
+						// Si el usuario eligió que termina el 3 de julio, debemos pasar 4 de julio.
+						const d = new Date(end);
+						d.setUTCDate(d.getUTCDate() + 1);
+						end = d.toISOString().split('T')[0];
+					}
+				}
+			}
+
+			return {
+				id: e.id,
+				title: e.title,
+				start: start,
+				end: end,
+				allDay: e.all_day,
+				backgroundColor: (e as any).event_categories?.color ?? '#0a3055',
+				borderColor: (e as any).event_categories?.color ?? '#0a3055',
+				extendedProps: { ...e }
+			};
+		});
 	}
 
 	onMount(async () => {
@@ -66,12 +103,13 @@
 				day: 'Día',
 				list: 'Lista'
 			},
-			events: mapToFCEvents(data.events),
+			eventDisplay: 'list-item', // Fuerza a que TODOS los eventos (incluso allDay) se vean como puntito
+			events: mapToFCEvents(visibleEvents),
 			selectable: true,
 			selectMirror: true,
 			editable: false, // drag-to-edit off for now
 			eventClick: (info: any) => {
-				selectedEvent = info.event.extendedProps;
+				selectedEvent = { ...info.event.extendedProps, id: info.event.id };
 				showDetailModal = true;
 			},
 			select: (info: any) => {
@@ -91,9 +129,9 @@
 		return () => calendarInstance?.destroy();
 	});
 
-	// Reactively update calendar when events change
+	// Reactively update calendar when events (or the teacher-events toggle) change
 	$effect(() => {
-		const events = data.events;
+		const events = visibleEvents;
 		if (calendarInstance) {
 			calendarInstance.removeAllEvents();
 			calendarInstance.addEventSource(mapToFCEvents(events));
@@ -143,9 +181,10 @@
 			{#if isDirector}
 				<div class="teacher-toggle-wrapper" class:loading={togglingTeacher}>
 					<label class="toggle-wrapper" for="toggle-teacher">
-						<div class="toggle" id="toggle-teacher">
+						<div class="toggle">
 							<input
 								type="checkbox"
+								id="toggle-teacher"
 								checked={showTeacher}
 								onchange={(e) => handleToggleTeacher((e.target as HTMLInputElement).checked)}
 								disabled={togglingTeacher}
@@ -200,6 +239,7 @@
 	event={editingEvent}
 	categories={data.categories}
 	groups={data.groups}
+	courses={data.courses}
 	userRole={data.profile?.role ?? 'teacher'}
 	schoolId={data.profile?.school_id ?? ''}
 	initialDateRange={selectedDateRange}

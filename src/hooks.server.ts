@@ -1,8 +1,9 @@
 import { createSupabaseServerClient } from '$lib/supabase';
+import { dev } from '$app/environment';
 import { type Handle, redirect } from '@sveltejs/kit';
 
 // Routes that don't require authentication
-const PUBLIC_ROUTES = ['/login', '/auth/callback'];
+const PUBLIC_ROUTES = ['/login', '/auth/callback', '/recuperar-password', '/update-password', '/__preview'];
 
 export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.supabase = createSupabaseServerClient(
@@ -10,7 +11,12 @@ export const handle: Handle = async ({ event, resolve }) => {
 		() => event.cookies.getAll(),
 		(cookies) => {
 			cookies.forEach(({ name, value, options }) => {
-				event.cookies.set(name, value, { path: '/', ...options });
+				// @supabase/ssr fuerza `secure: true` por defecto. En dev (ej. probando
+				// desde el celular vía IP de red local sobre http, no https) el navegador
+				// descarta silenciosamente esa cookie porque el origen no es un contexto
+				// seguro (a diferencia de "localhost", que sí lo es) — eso rompe el login.
+				// En producción (detrás de https) se respeta el `secure: true` normal.
+				event.cookies.set(name, value, { path: '/', ...options, secure: dev ? false : options.secure });
 			});
 		}
 	);
@@ -61,16 +67,18 @@ export const handle: Handle = async ({ event, resolve }) => {
 	if (user) {
 		const { data: profile } = await event.locals.supabase
 			.from('profiles')
-			.select('id, full_name, role, school_id, phone, avatar_url, schools(logo_url, status, primary_color)')
+			.select('id, full_name, role, extra_roles, school_id, phone, avatar_url, schools(logo_url, status, primary_color, whatsapp_enabled)')
 			.eq('id', user.id)
 			.single();
-		
+
 		if (profile) {
 			event.locals.profile = {
 				...profile,
+				extra_roles: profile.extra_roles ?? [],
 				school_logo_url: profile.schools?.logo_url ?? null,
 				school_status: profile.schools?.status ?? 'active',
-				school_primary_color: profile.schools?.primary_color ?? null
+				school_primary_color: profile.schools?.primary_color ?? null,
+				school_whatsapp_enabled: profile.schools?.whatsapp_enabled ?? false
 			};
 		} else {
 			event.locals.profile = null;
@@ -82,7 +90,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// Cross-domain security check
 	if (event.locals.user && tenant && event.locals.profile) {
 		// Si el usuario tiene una escuela distinta al tenant del dominio, y no es admin global
-		if (event.locals.profile.school_id !== tenant.id && event.locals.profile.role !== 'admin') {
+		if (event.locals.profile.school_id !== tenant.id && event.locals.profile.role !== 'superadmin') {
 			await event.locals.supabase.auth.signOut();
 			throw redirect(303, '/login?error=invalid_domain');
 		}
@@ -98,15 +106,15 @@ export const handle: Handle = async ({ event, resolve }) => {
 	if (
 		user && 
 		event.locals.profile?.school_status === 'suspended' && 
-		event.locals.profile?.role !== 'admin' && 
+		event.locals.profile?.role !== 'superadmin' && 
 		event.url.pathname !== '/suspendida' &&
 		event.url.pathname !== '/logout'
 	) {
 		throw redirect(303, '/suspendida');
 	}
 
-	// Redirect authenticated users away from login
-	if (user && event.url.pathname === '/login') {
+	// Redirect authenticated users away from login and root
+	if (user && (event.url.pathname === '/login' || event.url.pathname === '/')) {
 		throw redirect(303, '/calendario');
 	}
 

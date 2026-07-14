@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { AlertOctagon } from 'lucide-svelte';
+	import { AlertOctagon } from '@lucide/svelte';
 </script>
 
 <svelte:head>
@@ -30,11 +30,7 @@
 		padding: 3rem 2rem;
 		text-align: center;
 		max-width: 500px;
-		box-shadow: 0 10px 25px rgba(220, 38, 38, 0.1);
-	}
-	.icon {
-		color: var(--color-danger);
-		margin-bottom: 1.5rem;
+		box-shadow: 0 10px 25px color-mix(in srgb, var(--color-danger) 10%, transparent);
 	}
 	h1 {
 		font-size: 1.75rem;

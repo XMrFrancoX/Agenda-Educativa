@@ -114,7 +114,7 @@ Deno.serve(async (_req) => {
 
   const { data: events24h } = await supabase
     .from('calendar_events')
-    .select('*, profiles!created_by(id, email, phone, full_name), user_preferences!profiles!created_by(notify_email, notify_whatsapp, notify_24h)')
+    .select('*, profiles!created_by(id, email, phone, full_name, schools(whatsapp_enabled)), user_preferences!profiles!created_by(notify_email, notify_whatsapp, notify_24h)')
     .gte('starts_at', window24hStart.toISOString())
     .lte('starts_at', window24hEnd.toISOString())
     .eq('notified_24h', false);
@@ -133,7 +133,7 @@ Deno.serve(async (_req) => {
       await supabase.from('notification_log').insert({ event_id: event.id, user_id: profile.id, channel: 'email', status: ok ? 'sent' : 'failed' });
       if (ok) notified = true;
     }
-    if (prefs?.notify_whatsapp !== false && profile.phone) {
+    if (profile.schools?.whatsapp_enabled && prefs?.notify_whatsapp !== false && profile.phone) {
       const ok = await sendWhatsApp(profile.phone, message);
       await supabase.from('notification_log').insert({ event_id: event.id, user_id: profile.id, channel: 'whatsapp', status: ok ? 'sent' : 'failed' });
       if (ok) notified = true;
@@ -149,7 +149,7 @@ Deno.serve(async (_req) => {
 
   const { data: events1h } = await supabase
     .from('calendar_events')
-    .select('*, profiles!created_by(id, email, phone, full_name), user_preferences!profiles!created_by(notify_email, notify_whatsapp, notify_1h)')
+    .select('*, profiles!created_by(id, email, phone, full_name, schools(whatsapp_enabled)), user_preferences!profiles!created_by(notify_email, notify_whatsapp, notify_1h)')
     .gte('starts_at', window1hStart.toISOString())
     .lte('starts_at', window1hEnd.toISOString())
     .eq('notified_1h', false);
@@ -166,7 +166,7 @@ Deno.serve(async (_req) => {
       const ok = await sendEmail(profile.email, subject, buildEmailHtml(event, 1));
       await supabase.from('notification_log').insert({ event_id: event.id, user_id: profile.id, channel: 'email', status: ok ? 'sent' : 'failed' });
     }
-    if (prefs?.notify_whatsapp !== false && profile.phone) {
+    if (profile.schools?.whatsapp_enabled && prefs?.notify_whatsapp !== false && profile.phone) {
       const ok = await sendWhatsApp(profile.phone, message);
       await supabase.from('notification_log').insert({ event_id: event.id, user_id: profile.id, channel: 'whatsapp', status: ok ? 'sent' : 'failed' });
     }

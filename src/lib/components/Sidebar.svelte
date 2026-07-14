@@ -1,13 +1,22 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
+	import {
+		Menu, X, LogOut, Sun, Moon,
+		Calendar, ListTodo, CalendarClock,
+		UsersRound, Users, Settings,
+		UserCog
+	} from '@lucide/svelte';
+	import { getInitialTheme, applyTheme, type Theme } from '$lib/theme';
 	import type { Snippet } from 'svelte';
 
 	let { profile } = $props<{
 		profile: {
 			id: string;
 			full_name: string | null;
-			role: 'teacher' | 'director' | 'admin' | 'student' | 'tutor';
+			role: 'teacher' | 'director' | 'admin' | 'superadmin' | 'student' | 'tutor';
+			extra_roles?: string[];
 			school_id: string;
 			phone: string | null;
 			avatar_url: string | null;
@@ -18,7 +27,8 @@
 	const roleLabel: Record<string, string> = {
 		teacher: 'Docente',
 		director: 'Director/a',
-		admin: 'Administrador',
+		admin: 'Admin. Escuela',
+		superadmin: 'Super Admin',
 		student: 'Alumno/a',
 		tutor: 'Tutor/a'
 	};
@@ -27,6 +37,7 @@
 		teacher: 'role-teacher',
 		director: 'role-director',
 		admin: 'role-admin',
+		superadmin: 'role-superadmin',
 		student: 'role-student',
 		tutor: 'role-tutor'
 	};
@@ -42,58 +53,168 @@
 	}
 
 	function avatarColor(role: string) {
-		if (role === 'director') return 'linear-gradient(135deg, #8b5cf6, #6366f1)';
-		if (role === 'teacher') return 'linear-gradient(135deg, #06b6d4, #0284c7)';
+		if (role === 'director') return 'linear-gradient(135deg, #7c3aed, #0a3055)';
+		if (role === 'teacher') return 'linear-gradient(135deg, #0891b2, #0369a1)';
 		if (role === 'admin') return 'linear-gradient(135deg, #f59e0b, #d97706)';
+		if (role === 'superadmin') return 'linear-gradient(135deg, #ea580c, #c2410c)';
 		if (role === 'student') return 'linear-gradient(135deg, #10b981, #059669)';
 		return 'linear-gradient(135deg, #ec4899, #be185d)';
 	}
 
-	const navItems = [
+	const allRoles = ['student', 'tutor', 'teacher', 'director', 'admin', 'superadmin'];
+
+	const navGroups = [
 		{
-			href: '/calendario',
-			label: 'Calendario',
-			icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
-			roles: ['student', 'tutor', 'teacher', 'director', 'admin']
+			label: 'Principal',
+			items: [
+				{ href: '/calendario', label: 'Calendario', icon: Calendar, roles: allRoles },
+				{ href: '/tareas', label: 'Mis Tareas', icon: ListTodo, roles: allRoles },
+				{ href: '/reuniones', label: 'Reuniones', icon: CalendarClock, roles: allRoles }
+			]
 		},
 		{
-			href: '/tareas',
-			label: 'Mis Tareas',
-			icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`,
-			roles: ['student', 'tutor', 'teacher', 'director', 'admin']
+			label: 'Gestión Escolar',
+			items: [
+				{ href: '/staff', label: 'Planificador Staff', icon: UsersRound, roles: ['director', 'admin', 'superadmin'] },
+				{ href: '/alumnos', label: 'Alumnos y Tutores', icon: Users, roles: ['director', 'admin', 'superadmin'] },
+				{ href: '/configuracion', label: 'Configuración', icon: Settings, roles: ['director', 'admin', 'superadmin'] }
+			]
 		},
 		{
-			href: '/staff',
-			label: 'Planificador Staff',
-			icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
-			roles: ['director', 'admin']
-		},
-		{
-			href: '/reuniones',
-			label: 'Reuniones',
-			icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
-			roles: ['student', 'tutor', 'teacher', 'director', 'admin']
-		},
-		{
-			href: '/configuracion',
-			label: 'Configuración',
-			icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
-			roles: ['director', 'admin']
-		},
-		{
-			href: '/admin',
-			label: 'Panel Admin',
-			icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
-			roles: ['admin']
+			label: 'Administración',
+			items: [
+				{ href: '/admin', label: 'Gestión Usuarios', icon: UserCog, roles: ['admin', 'superadmin'] }
+			]
 		}
 	];
 
 	const currentPath = $derived($page.url.pathname);
-	const userRole = $derived(profile?.role ?? 'teacher');
-	const visibleNav = $derived(navItems.filter((item) => item.roles.includes(userRole)));
+
+	// Roles adicionales (ej. un director que también da clases) permiten
+	// "actuar como" otro rol — solo cambia qué ve acá en el sidebar, no los
+	// permisos reales de la cuenta (esos siguen siendo los de profile.role
+	// a nivel de RLS). La elección se guarda en localStorage por usuario.
+	const availableRoles = $derived(
+		profile ? [profile.role, ...(profile.extra_roles ?? [])] : []
+	);
+	let activeRole = $state<string | null>(null);
+	const userRole = $derived(activeRole ?? profile?.role ?? 'teacher');
+
+	const visibleGroups = $derived(
+		navGroups
+			.map((group) => ({ ...group, items: group.items.filter((item) => item.roles.includes(userRole)) }))
+			.filter((group) => group.items.length > 0)
+	);
+
+	function loadActiveRole() {
+		if (!profile) return;
+		try {
+			const stored = localStorage.getItem(`activeRole:${profile.id}`);
+			activeRole = stored && availableRoles.includes(stored) ? stored : profile.role;
+		} catch {
+			activeRole = profile.role;
+		}
+	}
+
+	function switchRole(role: string) {
+		activeRole = role;
+		if (profile) {
+			try {
+				localStorage.setItem(`activeRole:${profile.id}`, role);
+			} catch {
+				// localStorage puede no estar disponible — no es crítico.
+			}
+		}
+		// Volver al calendario: evita quedar en una pantalla que el nuevo
+		// rol activo no debería ver (ej. /admin al pasar a "Docente").
+		goto('/calendario');
+	}
+
+	let mobileOpen = $state(false);
+	let theme = $state<Theme>('light');
+
+	onMount(() => {
+		theme = getInitialTheme();
+		loadActiveRole();
+	});
+
+	function toggleTheme() {
+		theme = theme === 'light' ? 'dark' : 'light';
+		applyTheme(theme);
+	}
+
+	// Cerrar el drawer automáticamente al navegar
+	$effect(() => {
+		currentPath;
+		mobileOpen = false;
+	});
+
+	// Bloquear el scroll de fondo mientras el drawer está abierto
+	$effect(() => {
+		if (typeof document === 'undefined') return;
+		document.body.style.overflow = mobileOpen ? 'hidden' : '';
+		return () => {
+			document.body.style.overflow = '';
+		};
+	});
+
+	function handleKeydown(e: KeyboardEvent) {
+		if (e.key === 'Escape') mobileOpen = false;
+	}
 </script>
 
-<aside class="sidebar">
+<svelte:window onkeydown={handleKeydown} />
+
+<!-- Mobile top bar -->
+<div class="mobile-topbar">
+	<button
+		type="button"
+		class="mobile-menu-btn"
+		onclick={() => (mobileOpen = !mobileOpen)}
+		aria-label={mobileOpen ? 'Cerrar menú' : 'Abrir menú'}
+		aria-expanded={mobileOpen}
+	>
+		{#if mobileOpen}
+			<X size="20" />
+		{:else}
+			<Menu size="20" />
+		{/if}
+	</button>
+	<div class="mobile-brand">
+		{#if profile && profile.school_logo_url}
+			<img src={profile.school_logo_url} alt="Logo" class="mobile-brand-logo" />
+		{:else}
+			<svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+				<rect width="32" height="32" rx="9" fill="#0a3055"/>
+				<path d="M8 12h16M8 16h10M8 20h13" stroke="white" stroke-width="2" stroke-linecap="round"/>
+				<circle cx="24" cy="10" r="4" fill="#f59d1e"/>
+			</svg>
+		{/if}
+		<span class="mobile-brand-name">Agenda Educativa</span>
+	</div>
+	<button
+		type="button"
+		class="theme-toggle-btn"
+		onclick={toggleTheme}
+		aria-label={theme === 'light' ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro'}
+		title={theme === 'light' ? 'Modo oscuro' : 'Modo claro'}
+	>
+		{#if theme === 'light'}
+			<Moon size={18} />
+		{:else}
+			<Sun size={18} />
+		{/if}
+	</button>
+</div>
+
+<!-- Backdrop (solo mobile, cuando el drawer está abierto) -->
+{#if mobileOpen}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="sidebar-backdrop" role="presentation" onclick={() => (mobileOpen = false)}></div>
+{/if}
+
+<aside class="sidebar" class:mobile-open={mobileOpen}>
 	<!-- Brand -->
 	<div class="sidebar-brand">
 		<div class="brand-logo">
@@ -101,9 +222,9 @@
 				<img src={profile.school_logo_url} alt="Logo" class="custom-school-logo" />
 			{:else}
 				<svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-					<rect width="32" height="32" rx="9" fill="#6366f1"/>
+					<rect width="32" height="32" rx="9" fill="#0a3055"/>
 					<path d="M8 12h16M8 16h10M8 20h13" stroke="white" stroke-width="2" stroke-linecap="round"/>
-					<circle cx="24" cy="10" r="4" fill="#8b5cf6"/>
+					<circle cx="24" cy="10" r="4" fill="#f59d1e"/>
 				</svg>
 			{/if}
 		</div>
@@ -111,29 +232,63 @@
 			<span class="brand-name">Agenda</span>
 			<span class="brand-sub">Educativa</span>
 		</div>
+		<button
+			type="button"
+			class="theme-toggle-btn"
+			onclick={toggleTheme}
+			aria-label={theme === 'light' ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro'}
+			title={theme === 'light' ? 'Modo oscuro' : 'Modo claro'}
+		>
+			{#if theme === 'light'}
+				<Moon size={16} />
+			{:else}
+				<Sun size={16} />
+			{/if}
+		</button>
 	</div>
 
 	<div class="sidebar-divider"></div>
 
 	<!-- Navigation -->
 	<nav class="sidebar-nav" aria-label="Navegación principal">
-		{#each visibleNav as item}
-			<a
-				href={item.href}
-				class="nav-item"
-				class:active={currentPath.startsWith(item.href)}
-				aria-current={currentPath.startsWith(item.href) ? 'page' : undefined}
-			>
-				<span class="nav-icon">{@html item.icon}</span>
-				<span class="nav-label">{item.label}</span>
-				{#if currentPath.startsWith(item.href)}
-					<span class="nav-active-indicator"></span>
-				{/if}
-			</a>
+		{#each visibleGroups as group}
+			<div class="nav-group">
+				<span class="nav-group-label">{group.label}</span>
+				{#each group.items as item}
+					<a
+						href={item.href}
+						class="nav-item"
+						class:active={currentPath.startsWith(item.href)}
+						aria-current={currentPath.startsWith(item.href) ? 'page' : undefined}
+					>
+						<span class="nav-icon"><item.icon size={18} /></span>
+						<span class="nav-label">{item.label}</span>
+					</a>
+				{/each}
+			</div>
 		{/each}
 	</nav>
 
 	<div class="sidebar-spacer"></div>
+
+	<!-- Switch de rol activo (solo si el usuario tiene más de un rol asignado) -->
+	{#if availableRoles.length > 1}
+		<div class="role-switch">
+			<span class="role-switch-label">Viendo como</span>
+			<div class="role-switch-options">
+				{#each availableRoles as r}
+					<button
+						type="button"
+						class="role-switch-pill"
+						class:active={userRole === r}
+						onclick={() => switchRole(r)}
+					>
+						{roleLabel[r]}
+					</button>
+				{/each}
+			</div>
+		</div>
+	{/if}
 
 	<!-- User Profile -->
 	{#if profile}
@@ -147,8 +302,8 @@
 			</div>
 			<div class="profile-info">
 				<span class="profile-name">{profile.full_name ?? 'Usuario'}</span>
-				<span class="badge {roleClass[profile.role]} profile-role-badge">
-					{roleLabel[profile.role]}
+				<span class="badge {roleClass[userRole]} profile-role-badge">
+					{roleLabel[userRole]}
 				</span>
 			</div>
 		</div>
@@ -157,11 +312,7 @@
 	<!-- Logout -->
 	<form method="POST" action="/logout" class="sidebar-logout">
 		<button type="submit" class="logout-btn" id="btn-logout">
-			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-				<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-				<polyline points="16 17 21 12 16 7"/>
-				<line x1="21" y1="12" x2="9" y2="12"/>
-			</svg>
+			<LogOut size={16} />
 			Cerrar sesión
 		</button>
 	</form>
@@ -194,7 +345,7 @@
 	}
 	.brand-logo {
 		flex-shrink: 0;
-		filter: drop-shadow(0 0 8px rgba(99,102,241,0.4));
+		filter: drop-shadow(0 0 8px light-dark(rgba(10,48,85,0.25), rgba(245,157,30,0.4)));
 	}
 	.custom-school-logo {
 		width: 28px;
@@ -206,6 +357,8 @@
 		display: flex;
 		flex-direction: column;
 		line-height: 1;
+		flex: 1;
+		min-width: 0;
 	}
 	.brand-name {
 		font-family: 'Plus Jakarta Sans', sans-serif;
@@ -230,14 +383,28 @@
 	.sidebar-nav {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
+		gap: 1.25rem;
+	}
+	.nav-group {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+	.nav-group-label {
+		font-size: 0.6875rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: var(--text-muted);
+		padding: 0 0.75rem;
+		margin-bottom: 0.375rem;
 	}
 	.nav-item {
 		position: relative;
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
-		padding: 0.625rem 0.75rem;
+		padding: 0.5625rem 0.75rem;
 		border-radius: var(--radius-md);
 		color: var(--text-secondary);
 		font-size: 0.875rem;
@@ -248,12 +415,14 @@
 		overflow: hidden;
 	}
 	.nav-item:hover {
-		background: var(--bg-elevated);
+		background: var(--bg-overlay);
 		color: var(--text-primary);
 	}
 	.nav-item.active {
-		background: var(--color-primary-alpha-12, rgba(99, 102, 241, 0.12));
-		color: var(--color-primary-light, #a5b4fc);
+		background: var(--color-primary);
+		color: var(--text-on-primary);
+		font-weight: 600;
+		box-shadow: var(--shadow-sm);
 	}
 	.nav-icon {
 		flex-shrink: 0;
@@ -261,18 +430,45 @@
 		align-items: center;
 	}
 	.nav-label { flex: 1; }
-	.nav-active-indicator {
-		position: absolute;
-		right: 0;
-		top: 50%;
-		transform: translateY(-50%);
-		width: 3px;
-		height: 60%;
-		background: var(--color-primary);
-		border-radius: 2px 0 0 2px;
-	}
 
 	.sidebar-spacer { flex: 1; }
+
+	/* Role switch */
+	.role-switch {
+		padding: 0.5rem 0.75rem;
+		margin-bottom: 0.5rem;
+	}
+	.role-switch-label {
+		display: block;
+		font-size: 0.6875rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: var(--text-muted);
+		margin-bottom: 0.375rem;
+	}
+	.role-switch-options {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.375rem;
+	}
+	.role-switch-pill {
+		font-size: 0.75rem;
+		font-weight: 500;
+		padding: 0.25rem 0.625rem;
+		border-radius: 999px;
+		border: 1px solid var(--border-default);
+		background: none;
+		color: var(--text-secondary);
+		cursor: pointer;
+		transition: all var(--transition-fast);
+	}
+	.role-switch-pill:hover { border-color: var(--border-strong); color: var(--text-primary); }
+	.role-switch-pill.active {
+		background: var(--color-primary);
+		border-color: var(--color-primary);
+		color: var(--text-on-primary);
+	}
 
 	/* Profile */
 	.sidebar-profile {
@@ -336,7 +532,100 @@
 		font-family: inherit;
 	}
 	.logout-btn:hover {
-		background: rgba(239, 68, 68, 0.1);
-		color: #fca5a5;
+		background: color-mix(in srgb, var(--color-danger) 8%, transparent);
+		color: var(--color-danger);
+	}
+
+	/* Mobile top bar + drawer */
+	.mobile-topbar {
+		display: none;
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: var(--mobile-topbar-height, 56px);
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0 1rem;
+		background: var(--bg-surface);
+		border-bottom: 1px solid var(--border-subtle);
+		z-index: 45;
+	}
+	.mobile-menu-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 40px;
+		height: 40px;
+		border-radius: var(--radius-md);
+		background: none;
+		border: none;
+		color: var(--text-primary);
+		cursor: pointer;
+		flex-shrink: 0;
+	}
+	.mobile-menu-btn:hover { background: var(--bg-elevated); }
+	.mobile-brand {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		min-width: 0;
+		flex: 1;
+	}
+	.mobile-brand-logo {
+		width: 22px;
+		height: 22px;
+		object-fit: contain;
+		border-radius: 5px;
+		flex-shrink: 0;
+	}
+	.mobile-brand-name {
+		font-family: 'Plus Jakarta Sans', sans-serif;
+		font-weight: 800;
+		font-size: 0.9375rem;
+		color: var(--text-primary);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.theme-toggle-btn {
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 30px;
+		height: 30px;
+		border-radius: 999px;
+		background: none;
+		border: 1px solid var(--border-default);
+		color: var(--text-secondary);
+		cursor: pointer;
+		transition: all var(--transition-fast);
+	}
+	.theme-toggle-btn:hover {
+		color: var(--text-primary);
+		border-color: var(--border-strong);
+		background: var(--bg-elevated);
+	}
+
+	.sidebar-backdrop {
+		display: none;
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.55);
+		z-index: 55;
+	}
+
+	@media (max-width: 768px) {
+		.mobile-topbar { display: flex; }
+		.sidebar-backdrop { display: block; }
+		.sidebar {
+			transform: translateX(-100%);
+			transition: transform var(--transition-base);
+			z-index: 60;
+			box-shadow: var(--shadow-lg);
+		}
+		.sidebar.mobile-open { transform: translateX(0); }
 	}
 </style>

@@ -2,13 +2,15 @@
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import { Mail, Lock, Eye, EyeOff, LogIn, AlertCircle } from '@lucide/svelte';
+	import { Alert, AlertDescription } from '$lib/components/ui/alert';
 	import type { ActionData, PageData } from './$types';
 
 	let { form, data }: { form: ActionData; data: PageData } = $props();
 
 	let urlError = $derived($page.url.searchParams.get('error'));
 	let displayError = $derived(
-		form?.error || 
+		form?.error ||
 		(urlError === 'invalid_domain' ? 'Tu cuenta pertenece a otra institución. Verificá que estés en el link correcto.' : null)
 	);
 
@@ -39,9 +41,9 @@
 					<img src={data.tenant.logo_url} alt="Logo Institucional" style="width: 32px; height: 32px; border-radius: 6px; object-fit: contain;" />
 				{:else}
 					<svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-						<rect width="32" height="32" rx="10" fill="var(--color-primary, #6366f1)"/>
+						<rect width="32" height="32" rx="10" fill="var(--color-primary, #0a3055)"/>
 						<path d="M8 12h16M8 16h10M8 20h13" stroke="white" stroke-width="2" stroke-linecap="round"/>
-						<circle cx="24" cy="10" r="4" fill="var(--text-secondary, #8b5cf6)"/>
+						<circle cx="24" cy="10" r="4" fill="var(--color-secondary, #fbb117)"/>
 					</svg>
 				{/if}
 			</div>
@@ -59,12 +61,10 @@
 			</div>
 
 			{#if displayError}
-				<div class="alert-error" role="alert">
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-						<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-					</svg>
-					{displayError}
-				</div>
+				<Alert variant="destructive">
+					<AlertCircle size={16} />
+					<AlertDescription>{displayError}</AlertDescription>
+				</Alert>
 			{/if}
 
 			<form
@@ -75,7 +75,7 @@
 					return async ({ result, update }) => {
 						loading = false;
 						if (result.type === 'redirect') {
-							goto(result.location);
+							goto(result.location, { invalidateAll: true });
 						} else {
 							await update();
 						}
@@ -85,9 +85,7 @@
 				<div class="form-group">
 					<label class="input-label" for="email">Correo electrónico</label>
 					<div class="input-wrapper">
-						<svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-							<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
-						</svg>
+						<Mail class="input-icon" size={16} />
 						<input
 							id="email"
 							name="email"
@@ -104,9 +102,7 @@
 				<div class="form-group">
 					<label class="input-label" for="password">Contraseña</label>
 					<div class="input-wrapper">
-						<svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-							<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-						</svg>
+						<Lock class="input-icon" size={16} />
 						<input
 							id="password"
 							name="password"
@@ -124,16 +120,14 @@
 							aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
 						>
 							{#if showPassword}
-								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-									<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-									<line x1="1" y1="1" x2="23" y2="23"/>
-								</svg>
+								<EyeOff size={16} />
 							{:else}
-								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-									<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-								</svg>
+								<Eye size={16} />
 							{/if}
 						</button>
+					</div>
+					<div style="text-align: right; margin-top: 0.5rem;">
+						<a href="/recuperar-password" class="forgot-password-link">¿Olvidaste tu contraseña?</a>
 					</div>
 				</div>
 
@@ -142,9 +136,7 @@
 						<span class="spinner"></span>
 						Ingresando...
 					{:else}
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-							<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>
-						</svg>
+						<LogIn size={16} />
 						Ingresar
 					{/if}
 				</button>
@@ -179,26 +171,26 @@
 		position: absolute;
 		border-radius: 50%;
 		filter: blur(80px);
-		opacity: 0.15;
+		opacity: 0.12;
 	}
 	.orb-1 {
 		width: 500px;
 		height: 500px;
-		background: radial-gradient(circle, #6366f1, transparent);
+		background: radial-gradient(circle, #0a3055, transparent);
 		top: -100px;
 		left: -100px;
 	}
 	.orb-2 {
 		width: 400px;
 		height: 400px;
-		background: radial-gradient(circle, #8b5cf6, transparent);
+		background: radial-gradient(circle, #f59d1e, transparent);
 		bottom: -80px;
 		right: -80px;
 	}
 	.orb-3 {
 		width: 300px;
 		height: 300px;
-		background: radial-gradient(circle, #06b6d4, transparent);
+		background: radial-gradient(circle, #fbb117, transparent);
 		top: 50%;
 		left: 60%;
 	}
@@ -221,7 +213,7 @@
 		gap: 0.875rem;
 	}
 	.brand-icon {
-		filter: drop-shadow(0 0 16px rgba(99, 102, 241, 0.5));
+		filter: drop-shadow(0 0 16px light-dark(rgba(10, 48, 85, 0.3), rgba(245, 157, 30, 0.5)));
 	}
 	.brand-name {
 		font-size: 1.25rem;
@@ -251,27 +243,24 @@
 		color: var(--text-primary);
 	}
 	.login-card-header p {
-		font-size: 0.875rem;
 		color: var(--text-muted);
-		margin-top: 0.25rem;
+		font-size: 0.9375rem;
 	}
 
-	.alert-error {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 0.75rem 1rem;
-		background: rgba(239, 68, 68, 0.1);
-		border: 1px solid rgba(239, 68, 68, 0.25);
-		border-radius: var(--radius-md);
-		color: #fca5a5;
-		font-size: 0.875rem;
+	.forgot-password-link {
+		font-size: 0.8125rem;
+		color: var(--color-primary);
+		text-decoration: none;
+		font-weight: 500;
+	}
+	.forgot-password-link:hover {
+		text-decoration: underline;
 	}
 
 	.input-wrapper {
 		position: relative;
 	}
-	.input-icon {
+	.input-wrapper :global(.input-icon) {
 		position: absolute;
 		left: 0.75rem;
 		top: 50%;
