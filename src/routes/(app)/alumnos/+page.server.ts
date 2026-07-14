@@ -140,7 +140,10 @@ export const actions: Actions = {
 		const actionLink = data.properties?.action_link;
 		if (actionLink) {
 			const roleLabel = role === 'student' ? 'Alumno/a' : 'Tutor/a';
-			await sendInviteEmail(fullName, email, roleLabel, actionLink);
+			const sent = await sendInviteEmail(fullName, email, roleLabel, actionLink);
+			if (!sent) {
+				return fail(500, { error: 'Se creó la cuenta pero no se pudo enviar el mail de invitación. Probá "Reenviar invitación".' });
+			}
 		}
 
 		return { success: true };
@@ -176,7 +179,10 @@ export const actions: Actions = {
 		}
 
 		const roleLabel = role === 'student' ? 'Alumno/a' : 'Tutor/a';
-		await sendInviteEmail(fullName, email, roleLabel, data.properties.action_link);
+		const sent = await sendInviteEmail(fullName, email, roleLabel, data.properties.action_link);
+		if (!sent) {
+			return fail(500, { error: 'No se pudo enviar el mail de invitación. Revisá la configuración de Resend.' });
+		}
 
 		return { success: true, resent: true };
 	},

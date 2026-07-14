@@ -4,10 +4,10 @@ import { env } from '$env/dynamic/private';
  * Mail de invitación/reenvío compartido entre /alumnos y /staff — mismo
  * template, solo cambia el destinatario/rol/link.
  */
-export async function sendInviteEmail(fullName: string, email: string, roleLabel: string, actionLink: string) {
+export async function sendInviteEmail(fullName: string, email: string, roleLabel: string, actionLink: string): Promise<boolean> {
 	if (!env.RESEND_API_KEY) {
 		console.error('sendInviteEmail: RESEND_API_KEY no configurada, no se envía mail.');
-		return;
+		return false;
 	}
 	try {
 		const res = await fetch('https://api.resend.com/emails', {
@@ -37,8 +37,11 @@ export async function sendInviteEmail(fullName: string, email: string, roleLabel
 		});
 		if (!res.ok) {
 			console.error('sendInviteEmail Resend error:', res.status, await res.text());
+			return false;
 		}
+		return true;
 	} catch (err) {
 		console.error('sendInviteEmail exception:', err);
+		return false;
 	}
 }
