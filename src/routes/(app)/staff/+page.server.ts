@@ -2,6 +2,7 @@ import type { PageServerLoad, Actions } from './$types';
 import { fail, redirect } from '@sveltejs/kit';
 import { createSupabaseAdminClient } from '$lib/supabase.server';
 import { sendInviteEmail } from '$lib/server/invites';
+import { env } from '$env/dynamic/public';
 
 export const load: PageServerLoad = async ({ locals: { supabase, profile } }) => {
 	if (profile?.role !== 'director' && profile?.role !== 'admin' && profile?.role !== 'superadmin') {
@@ -56,7 +57,7 @@ export const load: PageServerLoad = async ({ locals: { supabase, profile } }) =>
 };
 
 export const actions: Actions = {
-	inviteMember: async ({ request, url, locals: { profile } }) => {
+	inviteMember: async ({ request, locals: { profile } }) => {
 		if (profile?.role !== 'director' && profile?.role !== 'admin' && profile?.role !== 'superadmin') {
 			return fail(403, { error: 'No autorizado.' });
 		}
@@ -76,7 +77,7 @@ export const actions: Actions = {
 			type: 'invite',
 			email,
 			options: {
-				redirectTo: `${url.origin}/update-password`,
+				redirectTo: `${env.PUBLIC_SITE_URL}/update-password`,
 				data: { full_name: fullName, role }
 			}
 		});
@@ -108,7 +109,7 @@ export const actions: Actions = {
 		return { success: true };
 	},
 
-	resendInvite: async ({ request, url, locals: { profile } }) => {
+	resendInvite: async ({ request, locals: { profile } }) => {
 		if (profile?.role !== 'director' && profile?.role !== 'admin' && profile?.role !== 'superadmin') {
 			return fail(403, { error: 'No autorizado.' });
 		}
@@ -125,7 +126,7 @@ export const actions: Actions = {
 		const { data, error } = await adminClient.auth.admin.generateLink({
 			type: 'recovery',
 			email,
-			options: { redirectTo: `${url.origin}/update-password` }
+			options: { redirectTo: `${env.PUBLIC_SITE_URL}/update-password` }
 		});
 
 		if (error || !data.properties?.action_link) {
