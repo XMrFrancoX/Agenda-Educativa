@@ -56,7 +56,7 @@
 		editingMeeting = meeting;
 		editTitle = meeting.title ?? '';
 		editDescription = meeting.description ?? '';
-		editDate = meeting.date ? meeting.date.slice(0, 16) : '';
+		editDate = meeting.date ? utcToLocalInputValue(meeting.date) : '';
 		editDuration = meeting.duration_min ?? 60;
 		editLocation = meeting.location ?? '';
 		showEdit = true;
@@ -75,20 +75,26 @@
 		}
 	}
 
-	// La columna `date` se guarda como si la hora local fuera UTC (bug conocido de
-	// almacenamiento). Sacamos el sufijo de zona horaria (Z o +hh:mm) para que el
-	// navegador la trate como hora local y muestre el horario que se ingresó,
-	// igual que hace el Calendario con starts_at/ends_at.
-	function stripTz(dt: string) {
-		return dt.replace(/(Z|[+-]\d{2}:\d{2})$/, '');
-	}
+	// `date` ahora se guarda como UTC real (fix del bug de zona horaria) — el
+	// navegador la convierte a hora local automáticamente al mostrarla.
 	function formatDate(dt: string) {
-		const d = new Date(stripTz(dt));
+		const d = new Date(dt);
 		return d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 	}
 	function formatTime(dt: string) {
-		const d = new Date(stripTz(dt));
+		const d = new Date(dt);
 		return d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+	}
+
+	// El input datetime-local trabaja en hora local del navegador, pero la DB
+	// guarda UTC — convertir en los dos sentidos (mismo patrón que Calendario).
+	function utcToLocalInputValue(isoUtc: string) {
+		const d = new Date(isoUtc);
+		const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+		return local.toISOString().slice(0, 16);
+	}
+	function localInputValueToUtc(localValue: string) {
+		return new Date(localValue).toISOString();
 	}
 	function statusLabel(s: string) {
 		return { scheduled: 'Programada', completed: 'Completada', cancelled: 'Cancelada', in_progress: 'En curso' }[s] ?? s;
@@ -99,7 +105,7 @@
 	function statusDotColor(s: string) {
 		return { scheduled: 'var(--color-primary)', completed: 'var(--color-success)', cancelled: 'var(--color-danger)', in_progress: 'var(--color-warning)' }[s] ?? 'var(--text-muted)';
 	}
-	function isPast(dt: string) { return new Date(stripTz(dt)) < new Date(); }
+	function isPast(dt: string) { return new Date(dt) < new Date(); }
 
 	function handleBackdropClick(e: MouseEvent) {
 		if ((e.target as HTMLElement).classList.contains('dialog-backdrop')) {
@@ -152,8 +158,8 @@
 					<div class="meeting-card upcoming">
 						<div class="meeting-card-header">
 							<div class="meeting-date-badge">
-								<span class="meeting-day">{new Date(stripTz(meeting.date)).getDate()}</span>
-								<span class="meeting-month">{new Date(stripTz(meeting.date)).toLocaleDateString('es-AR', { month: 'short' }).replace('.','')}
+								<span class="meeting-day">{new Date(meeting.date).getDate()}</span>
+								<span class="meeting-month">{new Date(meeting.date).toLocaleDateString('es-AR', { month: 'short' }).replace('.','')}
 								</span>
 							</div>
 							<div class="meeting-info">
@@ -380,8 +386,10 @@
 				</button>
 			</div>
 
-			<form method="POST" action="?/createMeeting" use:enhance={() => {
+			<form method="POST" action="?/createMeeting" use:enhance={({ formData }) => {
 				creating = true;
+				const d = formData.get('date');
+				if (d) formData.set('date', localInputValueToUtc(d as string));
 				return async ({ result, update }) => {
 					creating = false;
 					if (result.type === 'success') {
@@ -463,8 +471,10 @@
 					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
 				</button>
 			</div>
-			<form method="POST" action="?/updateMeeting" use:enhance={() => {
+			<form method="POST" action="?/updateMeeting" use:enhance={({ formData }) => {
 				updatingMeeting = true;
+				const d = formData.get('date');
+				if (d) formData.set('date', localInputValueToUtc(d as string));
 				return async ({ result, update }) => {
 					updatingMeeting = false;
 					if (result.type === 'success') {

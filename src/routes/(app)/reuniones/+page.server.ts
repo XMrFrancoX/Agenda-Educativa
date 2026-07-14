@@ -3,19 +3,23 @@ import { fail, redirect } from '@sveltejs/kit';
 import { createSupabaseAdminClient } from '$lib/supabase.server';
 import { sendMeetingNotification } from '$lib/server/notifications';
 
-// `date` llega como datetime-local ("YYYY-MM-DDTHH:mm") sin zona horaria. Se
-// calcula el fin aproximado con aritmética UTC pura (sin involucrar la zona
-// horaria del servidor) y se devuelve en el mismo formato naive, para
-// insertarlo en calendar_events.ends_at igual que se guarda starts_at.
-function computeEndLocalString(date: string, durationMin: number): string | null {
-	if (!date.includes('T')) return null;
-	const [datePart, timePart] = date.split('T');
-	const [year, month, day] = datePart.split('-').map(Number);
-	const [hour, minute] = timePart.slice(0, 5).split(':').map(Number);
-	const startUTC = Date.UTC(year, month - 1, day, hour, minute);
-	const end = new Date(startUTC + durationMin * 60000);
-	const pad = (n: number) => String(n).padStart(2, '0');
-	return `${end.getUTCFullYear()}-${pad(end.getUTCMonth() + 1)}-${pad(end.getUTCDate())}T${pad(end.getUTCHours())}:${pad(end.getUTCMinutes())}`;
+// `date` llega desde el cliente ya convertida a UTC real (ISO con "Z").
+function computeEndUtc(date: string, durationMin: number): string {
+	return new Date(new Date(date).getTime() + durationMin * 60000).toISOString();
+}
+
+const TZ = 'America/Argentina/Buenos_Aires';
+
+function formatMeetingRange(startIso: string, endIso: string): string {
+	const start = new Date(startIso);
+	const end = new Date(endIso);
+	const dateFmt = new Intl.DateTimeFormat('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: TZ });
+	const timeFmt = new Intl.DateTimeFormat('es-AR', { hour: '2-digit', minute: '2-digit', timeZone: TZ });
+
+	if (dateFmt.format(start) === dateFmt.format(end)) {
+		return `${dateFmt.format(start)} de ${timeFmt.format(start)} a ${timeFmt.format(end)} hs (aprox.)`;
+	}
+	return `${dateFmt.format(start)} de ${timeFmt.format(start)} hs hasta el ${dateFmt.format(end)} a las ${timeFmt.format(end)} hs (aprox.)`;
 }
 
 export const load: PageServerLoad = async ({ locals: { supabase, profile } }) => {
@@ -112,11 +116,13 @@ export const actions: Actions = {
 			.limit(1)
 			.maybeSingle();
 
+		const endsAt = computeEndUtc(date, duration);
+
 		await adminClient.from('calendar_events').insert({
 			title,
 			description: description || null,
 			starts_at: date,
-			ends_at: computeEndLocalString(date, duration),
+			ends_at: endsAt,
 			all_day: false,
 			location: location || null,
 			category_id: meetingCategory?.id ?? null,
@@ -128,28 +134,7 @@ export const actions: Actions = {
 
 		// Notificar a todos los participantes (incluye al creador si se agregó como participante)
 		if (allParticipants.length > 0) {
-			// Formateo por string, igual que en Calendario: `date` es un datetime-local
-			// ("YYYY-MM-DDTHH:mm") sin zona horaria, así que parsearlo con `new Date()`
-			// depende de la zona horaria del servidor y desfasa el horario mostrado.
-			let dateStr = date;
-			if (date.includes('T')) {
-				const [datePart, timePart] = date.split('T');
-				const [year, month, day] = datePart.split('-').map(Number);
-				const [hour, minute] = timePart.slice(0, 5).split(':').map(Number);
-				dateStr = `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year} de ${timePart.slice(0, 5)} hs`;
-
-				// Hora aprox. de fin = inicio + duración. Se calcula con Date.UTC/getUTC*
-				// (aritmética pura sobre los números, sin tocar zona horaria del servidor).
-				const startUTC = Date.UTC(year, month - 1, day, hour, minute);
-				const end = new Date(startUTC + duration * 60000);
-				const endTimeStr = `${String(end.getUTCHours()).padStart(2, '0')}:${String(end.getUTCMinutes()).padStart(2, '0')}`;
-
-				if (end.getUTCDate() === day && end.getUTCMonth() === month - 1 && end.getUTCFullYear() === year) {
-					dateStr += ` a ${endTimeStr} hs (aprox.)`;
-				} else {
-					dateStr += ` hasta el ${String(end.getUTCDate()).padStart(2, '0')}/${String(end.getUTCMonth() + 1).padStart(2, '0')}/${end.getUTCFullYear()} a las ${endTimeStr} hs (aprox.)`;
-				}
-			}
+			const dateStr = formatMeetingRange(date, endsAt);
 			const message = `${description ? description + '\n\n' : ''}Fecha: ${dateStr}${location ? `\nLugar: ${location}` : ''}`;
 
 			await sendMeetingNotification(title, message, allParticipants);
@@ -229,7 +214,7 @@ export const actions: Actions = {
 				title,
 				description: description || null,
 				starts_at: date,
-				ends_at: computeEndLocalString(date, duration),
+				ends_at: computeEndUtc(date, duration),
 				location: location || null,
 				updated_at: new Date().toISOString()
 			})
