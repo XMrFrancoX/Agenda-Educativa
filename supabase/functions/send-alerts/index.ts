@@ -143,9 +143,13 @@ Deno.serve(async (_req) => {
     if (notified) results.processed24h++;
   }
 
-  // ── Events in ~1 hour (between 45min and 75min from now) ─────────
-  const window1hStart = new Date(now.getTime() + 45 * 60 * 1000);
-  const window1hEnd   = new Date(now.getTime() + 75 * 60 * 1000);
+  // ── Events in ~1 hour (between 30min and 90min from now) ─────────
+  // Ventana de 60 min para garantizar que, corriendo por cron cada hora en
+  // punto, siempre haya al menos un tick dentro de la ventana sin importar
+  // en qué minuto de la hora empiece el evento (una ventana de 30min podía
+  // no solapar nunca con ningún :00 según el minuto de inicio del evento).
+  const window1hStart = new Date(now.getTime() + 30 * 60 * 1000);
+  const window1hEnd   = new Date(now.getTime() + 90 * 60 * 1000);
 
   const { data: events1h } = await supabase
     .from('calendar_events')
