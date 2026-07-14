@@ -56,6 +56,19 @@
 		return dateStr.slice(0, 16);
 	}
 
+	// El input datetime-local trabaja en hora local del navegador, pero la DB
+	// guarda UTC — hay que convertir en los dos sentidos para no desfasar el
+	// horario por el offset de zona horaria (ej: Argentina UTC-3).
+	function utcToLocalInputValue(isoUtc: string) {
+		const d = new Date(isoUtc);
+		const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+		return local.toISOString().slice(0, 16);
+	}
+
+	function localInputValueToUtc(localValue: string) {
+		return new Date(localValue).toISOString();
+	}
+
 	let prevOpen = $state(false);
 
 	// Populate form when editing or opening
@@ -66,8 +79,8 @@
 					title = event.title ?? '';
 					description = event.description ?? '';
 					allDay = event.all_day ?? false;
-					startsAt = event.starts_at ? (allDay ? event.starts_at.slice(0, 10) : event.starts_at.slice(0, 16)) : '';
-					endsAt = event.ends_at ? (allDay ? event.ends_at.slice(0, 10) : event.ends_at.slice(0, 16)) : '';
+					startsAt = event.starts_at ? (allDay ? event.starts_at.slice(0, 10) : utcToLocalInputValue(event.starts_at)) : '';
+					endsAt = event.ends_at ? (allDay ? event.ends_at.slice(0, 10) : utcToLocalInputValue(event.ends_at)) : '';
 					location = event.location ?? '';
 					categoryId = event.category_id ?? '';
 					visibility = event.visibility ?? 'private';
@@ -164,9 +177,15 @@
 			<form
 				method="POST"
 				action={actionUrl}
-				use:enhance={() => {
+				use:enhance={({ formData }) => {
 					loading = true;
 					formError = '';
+					if (!allDay) {
+						const s = formData.get('starts_at');
+						const e = formData.get('ends_at');
+						if (s) formData.set('starts_at', localInputValueToUtc(s as string));
+						if (e) formData.set('ends_at', localInputValueToUtc(e as string));
+					}
 					return async ({ result, update }) => {
 						loading = false;
 						if (result.type === 'success') {
