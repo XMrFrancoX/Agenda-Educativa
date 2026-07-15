@@ -167,9 +167,6 @@
 	<meta name="description" content="Calendario escolar con eventos y reuniones por rol" />
 </svelte:head>
 
-<!-- FullCalendar CSS (loaded dynamically) -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.15/main.min.css" />
-
 <div class="page-header">
 	<div class="page-header-content">
 		<div>
