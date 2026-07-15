@@ -41,9 +41,11 @@
 	// Map DB events → FullCalendar event format
 	function mapToFCEvents(events: typeof data.events) {
 		return events.map((e) => {
-			// Remover la información de zona horaria (Z o +00:00) para forzar a FullCalendar a tratarlo como Hora Local
-			let start = e.starts_at ? e.starts_at.replace(/(Z|[+-]\d{2}:\d{2})$/, '') : e.starts_at;
-			let end = e.ends_at ? e.ends_at.replace(/(Z|[+-]\d{2}:\d{2})$/, '') : e.ends_at;
+			// starts_at/ends_at ya vienen en UTC real desde la DB — FullCalendar
+			// (timeZone: 'local' por default) los convierte solo a hora local del
+			// navegador, no hay que tocar el string para eventos con horario.
+			let start = e.starts_at;
+			let end = e.ends_at;
 
 			if (e.all_day) {
 				start = start.split('T')[0];

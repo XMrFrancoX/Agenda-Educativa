@@ -8,6 +8,37 @@ const TASK_PRIORITY_COLOR: Record<string, string> = {
 	high: '#ef4444'
 };
 
+const TZ = 'America/Argentina/Buenos_Aires';
+
+// starts_at/ends_at llegan en UTC real — hay que convertir explícitamente a
+// hora de Argentina para el texto de la notificación (parsear el string
+// directo, como se hacía antes, mostraba el horario UTC crudo).
+function formatEventDateRange(startsAt: string, endsAt: string | null, allDay: boolean): string {
+	const dateFmt = new Intl.DateTimeFormat('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: TZ });
+	const timeFmt = new Intl.DateTimeFormat('es-AR', { hour: '2-digit', minute: '2-digit', timeZone: TZ });
+
+	const start = new Date(startsAt);
+	const end = endsAt ? new Date(endsAt) : null;
+
+	if (allDay) {
+		let dateStr = dateFmt.format(start);
+		if (end && dateFmt.format(end) !== dateFmt.format(start)) {
+			dateStr += ` hasta el ${dateFmt.format(end)}`;
+		}
+		return dateStr;
+	}
+
+	let dateStr = `${dateFmt.format(start)} a las ${timeFmt.format(start)} hs`;
+	if (end) {
+		if (dateFmt.format(end) === dateFmt.format(start)) {
+			dateStr += ` hasta las ${timeFmt.format(end)} hs`;
+		} else {
+			dateStr += ` hasta el ${dateFmt.format(end)} a las ${timeFmt.format(end)} hs`;
+		}
+	}
+	return dateStr;
+}
+
 export const load: PageServerLoad = async ({ locals: { supabase, profile } }) => {
 	// Load events — RLS handles visibility automatically based on role.
 	// school_id se filtra explícitamente para que, al cambiar de colegio,
@@ -169,27 +200,8 @@ export const actions: Actions = {
 
 		// Disparar notificaciones en segundo plano si es para un grupo, un curso o toda la escuela
 		if ((visibility === 'group' || visibility === 'course' || visibility === 'school') && profile?.school_id) {
-			let dateStr = starts_at.split('T')[0]; // simple date formatting
-			if (!all_day && starts_at.includes('T')) {
-				const timeStr = starts_at.split('T')[1].slice(0, 5);
-				dateStr += ` a las ${timeStr} hs`;
-				
-				if (ends_at && ends_at.includes('T')) {
-					const endTimeStr = ends_at.split('T')[1].slice(0, 5);
-					const endDateStr = ends_at.split('T')[0];
-					if (endDateStr === starts_at.split('T')[0]) {
-						dateStr += ` hasta las ${endTimeStr} hs`;
-					} else {
-						dateStr += ` hasta el ${endDateStr} a las ${endTimeStr} hs`;
-					}
-				}
-			} else if (all_day && ends_at) {
-				const endDateStr = ends_at.split('T')[0];
-				if (endDateStr !== starts_at.split('T')[0]) {
-					dateStr += ` hasta el ${endDateStr}`;
-				}
-			}
-			
+			const dateStr = formatEventDateRange(starts_at, ends_at || null, all_day);
+
 			await sendEventNotification({
 				title,
 				message: `${description ? description + '\n\n' : ''}Fecha programada: ${dateStr}`,
