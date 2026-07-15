@@ -112,16 +112,35 @@ Deno.serve(async (_req) => {
   const window24hStart = new Date(now.getTime() + 23 * 60 * 60 * 1000);
   const window24hEnd   = new Date(now.getTime() + 25 * 60 * 60 * 1000);
 
-  const { data: events24h } = await supabase
+  const { data: events24h, error: events24hError } = await supabase
     .from('calendar_events')
-    .select('*, profiles!created_by(id, email, phone, full_name, schools(whatsapp_enabled)), user_preferences!profiles!created_by(notify_email, notify_whatsapp, notify_24h)')
+    .select('*, profiles!created_by(id, email, phone, full_name, schools(whatsapp_enabled))')
     .gte('starts_at', window24hStart.toISOString())
     .lte('starts_at', window24hEnd.toISOString())
     .eq('notified_24h', false);
 
+  if (events24hError) { console.error('events24h query error:', events24hError); results.errors++; }
+
+  // user_preferences no tiene FK directa a calendar_events ni a profiles
+  // (solo a auth.users), así que PostgREST no puede anidarla en el select
+  // de arriba — se busca aparte por user_id y se cruza en memoria.
+  const createdByIds = new Set<string>();
+  for (const e of [...(events24h ?? [])]) {
+    const p = (e as any).profiles;
+    if (p?.id) createdByIds.add(p.id);
+  }
+
+  const { data: prefsRows, error: prefsError } = createdByIds.size > 0
+    ? await supabase.from('user_preferences').select('user_id, notify_email, notify_whatsapp, notify_24h, notify_1h').in('user_id', [...createdByIds])
+    : { data: [], error: null };
+
+  if (prefsError) { console.error('user_preferences query error:', prefsError); results.errors++; }
+
+  const prefsByUser = new Map((prefsRows ?? []).map((p: any) => [p.user_id, p]));
+
   for (const event of events24h ?? []) {
     const profile = (event as any).profiles;
-    const prefs   = (event as any).user_preferences;
+    const prefs   = profile ? prefsByUser.get(profile.id) : undefined;
     if (!profile || prefs?.notify_24h === false) continue;
 
     const subject = `Recordatorio: ${event.title} — Mañana`;
@@ -151,16 +170,32 @@ Deno.serve(async (_req) => {
   const window1hStart = new Date(now.getTime() + 30 * 60 * 1000);
   const window1hEnd   = new Date(now.getTime() + 90 * 60 * 1000);
 
-  const { data: events1h } = await supabase
+  const { data: events1h, error: events1hError } = await supabase
     .from('calendar_events')
-    .select('*, profiles!created_by(id, email, phone, full_name, schools(whatsapp_enabled)), user_preferences!profiles!created_by(notify_email, notify_whatsapp, notify_1h)')
+    .select('*, profiles!created_by(id, email, phone, full_name, schools(whatsapp_enabled))')
     .gte('starts_at', window1hStart.toISOString())
     .lte('starts_at', window1hEnd.toISOString())
     .eq('notified_1h', false);
 
+  if (events1hError) { console.error('events1h query error:', events1hError); results.errors++; }
+
+  const createdByIds1h = new Set<string>();
+  for (const e of [...(events1h ?? [])]) {
+    const p = (e as any).profiles;
+    if (p?.id) createdByIds1h.add(p.id);
+  }
+
+  const { data: prefsRows1h, error: prefsError1h } = createdByIds1h.size > 0
+    ? await supabase.from('user_preferences').select('user_id, notify_email, notify_whatsapp, notify_24h, notify_1h').in('user_id', [...createdByIds1h])
+    : { data: [], error: null };
+
+  if (prefsError1h) { console.error('user_preferences (1h) query error:', prefsError1h); results.errors++; }
+
+  const prefsByUser1h = new Map((prefsRows1h ?? []).map((p: any) => [p.user_id, p]));
+
   for (const event of events1h ?? []) {
     const profile = (event as any).profiles;
-    const prefs   = (event as any).user_preferences;
+    const prefs   = profile ? prefsByUser1h.get(profile.id) : undefined;
     if (!profile || prefs?.notify_1h === false) continue;
 
     const subject = `¡En 1 hora! ${event.title}`;
