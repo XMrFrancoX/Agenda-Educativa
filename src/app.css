@@ -37,6 +37,13 @@
 :root[data-theme='light'] { color-scheme: light; }
 :root[data-theme='dark']  { color-scheme: dark; }
 
+/* --shadow-glow cambia blur además de color entre temas, algo que
+   light-dark() no puede expresar (solo elige entre dos <color>) — se
+   pisa la propiedad completa acá, gana por especificidad de atributo. */
+:root[data-theme='dark'] {
+  --shadow-glow: 0 0 24px rgba(59,130,246,0.28);
+}
+
 :root {
   /* Brand Colors — paleta NMF (mismo azul/naranja del logo que Landing
      Page); en dark mode se invierte primary/accent para mantener
@@ -76,10 +83,17 @@
   --glass-blur:       blur(16px);
 
   /* Shadows */
-  --shadow-sm:   light-dark(0 1px 3px rgba(15,23,42,0.08),  0 1px 3px rgba(0,0,0,0.4));
-  --shadow-md:   light-dark(0 4px 16px rgba(15,23,42,0.10), 0 4px 16px rgba(0,0,0,0.5));
-  --shadow-lg:   light-dark(0 8px 32px rgba(15,23,42,0.14), 0 8px 32px rgba(0,0,0,0.6));
-  --shadow-glow: light-dark(0 0 20px rgba(37,99,235,0.18),  0 0 24px rgba(59,130,246,0.28));
+  /* light-dark() solo puede envolver un <color>, no un box-shadow entero
+     (offsets+blur+color) — envolverlo todo hacía que el navegador
+     descartara la declaración completa como inválida, y box-shadow
+     computaba `none` en cualquier lado que la usara. */
+  --shadow-sm:   0 1px 3px  light-dark(rgba(15,23,42,0.08), rgba(0,0,0,0.4));
+  --shadow-md:   0 4px 16px light-dark(rgba(15,23,42,0.10), rgba(0,0,0,0.5));
+  --shadow-lg:   0 8px 32px light-dark(rgba(15,23,42,0.14), rgba(0,0,0,0.6));
+  /* --shadow-glow cambia también el blur (20px/24px), no solo el color,
+     así que no entra en el patrón de arriba — se resuelve con override
+     completo en el bloque [data-theme='dark'] de abajo. */
+  --shadow-glow: 0 0 20px rgba(37,99,235,0.18);
 
   /* Sidebar */
   --sidebar-width: 260px;
