@@ -33,6 +33,7 @@ async function sendEmail(to: string, subject: string, html: string) {
     },
     body: JSON.stringify({ from: EMAIL_FROM, to: [to], subject, html })
   });
+  if (!res.ok) console.error(`sendEmail failed for ${to}: ${res.status} ${await res.text()}`);
   return res.ok;
 }
 
@@ -103,117 +104,129 @@ function buildEmailHtml(event: Record<string, any>, hoursAhead: number): string 
   `;
 }
 
+// ─── Resolver de destinatarios ──────────────────────────────────────
+// Mismo criterio que sendEventNotification() en src/lib/server/notifications.ts
+// (email inmediato al crear): 'school' → todos los profiles de la escuela,
+// 'group' → miembros de staff_group_members, 'course' → miembros de
+// course_members, cualquier otro caso (o 'private') → solo el creador.
+// El edge function anterior nunca miraba `visibility` y siempre mandaba el
+// recordatorio 24h/1h solo al creador del evento, sin importar si era para
+// toda la institución — por eso solo le llegaba a esa única persona.
+async function resolveRecipientIds(event: Record<string, any>): Promise<string[]> {
+  if (event.visibility === 'school' && event.school_id) {
+    const { data, error } = await supabase.from('profiles').select('id').eq('school_id', event.school_id);
+    if (error) console.error('resolveRecipientIds (school):', error);
+    return data?.map((p: any) => p.id) ?? [];
+  }
+  if (event.visibility === 'group' && event.group_id) {
+    const { data, error } = await supabase.from('staff_group_members').select('user_id').eq('group_id', event.group_id);
+    if (error) console.error('resolveRecipientIds (group):', error);
+    return data?.map((m: any) => m.user_id) ?? [];
+  }
+  if (event.visibility === 'course' && event.course_id) {
+    const { data, error } = await supabase.from('course_members').select('user_id').eq('course_id', event.course_id);
+    if (error) console.error('resolveRecipientIds (course):', error);
+    return data?.map((m: any) => m.user_id) ?? [];
+  }
+  return event.created_by ? [event.created_by] : [];
+}
+
+// ─── Procesa una ventana (24h o 1h) ─────────────────────────────────
+async function processWindow(
+  windowStart: Date,
+  windowEnd: Date,
+  notifiedColumn: 'notified_24h' | 'notified_1h',
+  prefsColumn: 'notify_24h' | 'notify_1h',
+  hoursAhead: number
+): Promise<number> {
+  const { data: events, error: eventsError } = await supabase
+    .from('calendar_events')
+    .select('id, title, starts_at, location, description, visibility, school_id, group_id, course_id, created_by')
+    .gte('starts_at', windowStart.toISOString())
+    .lte('starts_at', windowEnd.toISOString())
+    .eq(notifiedColumn, false);
+
+  if (eventsError) { console.error(`events (${notifiedColumn}) query error:`, eventsError); return 0; }
+  if (!events || events.length === 0) return 0;
+
+  let processed = 0;
+
+  for (const event of events) {
+    const userIds = await resolveRecipientIds(event);
+
+    if (userIds.length === 0) {
+      await supabase.from('calendar_events').update({ [notifiedColumn]: true }).eq('id', event.id);
+      continue;
+    }
+
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, email, phone, full_name, schools(whatsapp_enabled)')
+      .in('id', userIds);
+    if (profilesError) console.error(`profiles query error (${notifiedColumn}):`, profilesError);
+
+    const { data: prefsRows, error: prefsError } = await supabase
+      .from('user_preferences')
+      .select('user_id, notify_email, notify_whatsapp, notify_24h, notify_1h')
+      .in('user_id', userIds);
+    if (prefsError) console.error(`user_preferences query error (${notifiedColumn}):`, prefsError);
+
+    const prefsByUser = new Map((prefsRows ?? []).map((p: any) => [p.user_id, p]));
+
+    const subject = hoursAhead <= 1 ? `¡En 1 hora! ${event.title}` : `Recordatorio: ${event.title} — Mañana`;
+    const message = hoursAhead <= 1
+      ? `🚨 ¡En 1 hora! Agenda Educativa\n\n*${event.title}*\n🕐 ${formatDateES(event.starts_at)}${event.location ? '\n📍 ' + event.location : ''}\n\n— Agenda Educativa`
+      : `📅 Recordatorio Agenda Educativa\n\n*${event.title}*\n🕐 ${formatDateES(event.starts_at)}${event.location ? '\n📍 ' + event.location : ''}\n\n— Agenda Educativa`;
+
+    let anyNotified = false;
+
+    for (const profile of profiles ?? []) {
+      const prefs = prefsByUser.get(profile.id);
+      if (prefs?.[prefsColumn] === false) continue;
+
+      if (prefs?.notify_email !== false && profile.email) {
+        const ok = await sendEmail(profile.email, subject, buildEmailHtml(event, hoursAhead));
+        await supabase.from('notification_log').insert({ event_id: event.id, user_id: profile.id, channel: 'email', status: ok ? 'sent' : 'failed' });
+        if (ok) anyNotified = true;
+        // Espaciamos los envíos para no pegarle al rate limit de Resend
+        // cuando un evento "toda la institución" tiene muchos destinatarios.
+        await new Promise((r) => setTimeout(r, 400));
+      }
+      if ((profile as any).schools?.whatsapp_enabled && prefs?.notify_whatsapp !== false && profile.phone) {
+        const ok = await sendWhatsApp(profile.phone, message);
+        await supabase.from('notification_log').insert({ event_id: event.id, user_id: profile.id, channel: 'whatsapp', status: ok ? 'sent' : 'failed' });
+        if (ok) anyNotified = true;
+      }
+    }
+
+    await supabase.from('calendar_events').update({ [notifiedColumn]: true }).eq('id', event.id);
+    if (anyNotified) processed++;
+  }
+
+  return processed;
+}
+
 // ─── Main handler ───────────────────────────────────────────────────
 Deno.serve(async (_req) => {
   const now = new Date();
-  const results = { processed24h: 0, processed1h: 0, errors: 0 };
 
-  // ── Events in ~24 hours (between 23h and 25h from now) ──────────
-  const window24hStart = new Date(now.getTime() + 23 * 60 * 60 * 1000);
-  const window24hEnd   = new Date(now.getTime() + 25 * 60 * 60 * 1000);
+  // Events in ~24 hours (between 23h and 25h from now)
+  const processed24h = await processWindow(
+    new Date(now.getTime() + 23 * 60 * 60 * 1000),
+    new Date(now.getTime() + 25 * 60 * 60 * 1000),
+    'notified_24h', 'notify_24h', 24
+  );
 
-  const { data: events24h, error: events24hError } = await supabase
-    .from('calendar_events')
-    .select('*, profiles!created_by(id, email, phone, full_name, schools(whatsapp_enabled))')
-    .gte('starts_at', window24hStart.toISOString())
-    .lte('starts_at', window24hEnd.toISOString())
-    .eq('notified_24h', false);
+  // Events in ~1 hour. Ventana de 60 min (30-90) para garantizar que,
+  // corriendo por cron cada hora en punto, siempre haya al menos un tick
+  // dentro de la ventana sin importar en qué minuto empiece el evento.
+  const processed1h = await processWindow(
+    new Date(now.getTime() + 30 * 60 * 1000),
+    new Date(now.getTime() + 90 * 60 * 1000),
+    'notified_1h', 'notify_1h', 1
+  );
 
-  if (events24hError) { console.error('events24h query error:', events24hError); results.errors++; }
-
-  // user_preferences no tiene FK directa a calendar_events ni a profiles
-  // (solo a auth.users), así que PostgREST no puede anidarla en el select
-  // de arriba — se busca aparte por user_id y se cruza en memoria.
-  const createdByIds = new Set<string>();
-  for (const e of [...(events24h ?? [])]) {
-    const p = (e as any).profiles;
-    if (p?.id) createdByIds.add(p.id);
-  }
-
-  const { data: prefsRows, error: prefsError } = createdByIds.size > 0
-    ? await supabase.from('user_preferences').select('user_id, notify_email, notify_whatsapp, notify_24h, notify_1h').in('user_id', [...createdByIds])
-    : { data: [], error: null };
-
-  if (prefsError) { console.error('user_preferences query error:', prefsError); results.errors++; }
-
-  const prefsByUser = new Map((prefsRows ?? []).map((p: any) => [p.user_id, p]));
-
-  for (const event of events24h ?? []) {
-    const profile = (event as any).profiles;
-    const prefs   = profile ? prefsByUser.get(profile.id) : undefined;
-    if (!profile || prefs?.notify_24h === false) continue;
-
-    const subject = `Recordatorio: ${event.title} — Mañana`;
-    const message = `📅 Recordatorio Agenda Educativa\n\n*${event.title}*\n🕐 ${formatDateES(event.starts_at)}${event.location ? '\n📍 ' + event.location : ''}\n\n— Agenda Educativa`;
-
-    let notified = false;
-    if (prefs?.notify_email !== false && profile.email) {
-      const ok = await sendEmail(profile.email, subject, buildEmailHtml(event, 24));
-      await supabase.from('notification_log').insert({ event_id: event.id, user_id: profile.id, channel: 'email', status: ok ? 'sent' : 'failed' });
-      if (ok) notified = true;
-    }
-    if (profile.schools?.whatsapp_enabled && prefs?.notify_whatsapp !== false && profile.phone) {
-      const ok = await sendWhatsApp(profile.phone, message);
-      await supabase.from('notification_log').insert({ event_id: event.id, user_id: profile.id, channel: 'whatsapp', status: ok ? 'sent' : 'failed' });
-      if (ok) notified = true;
-    }
-
-    await supabase.from('calendar_events').update({ notified_24h: true }).eq('id', event.id);
-    if (notified) results.processed24h++;
-  }
-
-  // ── Events in ~1 hour (between 30min and 90min from now) ─────────
-  // Ventana de 60 min para garantizar que, corriendo por cron cada hora en
-  // punto, siempre haya al menos un tick dentro de la ventana sin importar
-  // en qué minuto de la hora empiece el evento (una ventana de 30min podía
-  // no solapar nunca con ningún :00 según el minuto de inicio del evento).
-  const window1hStart = new Date(now.getTime() + 30 * 60 * 1000);
-  const window1hEnd   = new Date(now.getTime() + 90 * 60 * 1000);
-
-  const { data: events1h, error: events1hError } = await supabase
-    .from('calendar_events')
-    .select('*, profiles!created_by(id, email, phone, full_name, schools(whatsapp_enabled))')
-    .gte('starts_at', window1hStart.toISOString())
-    .lte('starts_at', window1hEnd.toISOString())
-    .eq('notified_1h', false);
-
-  if (events1hError) { console.error('events1h query error:', events1hError); results.errors++; }
-
-  const createdByIds1h = new Set<string>();
-  for (const e of [...(events1h ?? [])]) {
-    const p = (e as any).profiles;
-    if (p?.id) createdByIds1h.add(p.id);
-  }
-
-  const { data: prefsRows1h, error: prefsError1h } = createdByIds1h.size > 0
-    ? await supabase.from('user_preferences').select('user_id, notify_email, notify_whatsapp, notify_24h, notify_1h').in('user_id', [...createdByIds1h])
-    : { data: [], error: null };
-
-  if (prefsError1h) { console.error('user_preferences (1h) query error:', prefsError1h); results.errors++; }
-
-  const prefsByUser1h = new Map((prefsRows1h ?? []).map((p: any) => [p.user_id, p]));
-
-  for (const event of events1h ?? []) {
-    const profile = (event as any).profiles;
-    const prefs   = profile ? prefsByUser1h.get(profile.id) : undefined;
-    if (!profile || prefs?.notify_1h === false) continue;
-
-    const subject = `¡En 1 hora! ${event.title}`;
-    const message = `🚨 ¡En 1 hora! Agenda Educativa\n\n*${event.title}*\n🕐 ${formatDateES(event.starts_at)}${event.location ? '\n📍 ' + event.location : ''}\n\n— Agenda Educativa`;
-
-    if (prefs?.notify_email !== false && profile.email) {
-      const ok = await sendEmail(profile.email, subject, buildEmailHtml(event, 1));
-      await supabase.from('notification_log').insert({ event_id: event.id, user_id: profile.id, channel: 'email', status: ok ? 'sent' : 'failed' });
-    }
-    if (profile.schools?.whatsapp_enabled && prefs?.notify_whatsapp !== false && profile.phone) {
-      const ok = await sendWhatsApp(profile.phone, message);
-      await supabase.from('notification_log').insert({ event_id: event.id, user_id: profile.id, channel: 'whatsapp', status: ok ? 'sent' : 'failed' });
-    }
-
-    await supabase.from('calendar_events').update({ notified_1h: true }).eq('id', event.id);
-    results.processed1h++;
-  }
-
+  const results = { processed24h, processed1h };
   console.log('Alert results:', results);
 
   return new Response(JSON.stringify({ ok: true, ...results, timestamp: now.toISOString() }), {
