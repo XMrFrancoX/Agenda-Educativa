@@ -46,19 +46,30 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const { session, user } = await event.locals.safeGetSession();
 	event.locals.user = user;
 
-	// Domain Detection (Multi-tenant)
+	// Domain Detection (Multi-tenant): dominio propio POR SERVICIO
+	// (school_domains) en vez de una sola columna genérica en schools — la
+	// misma escuela puede usar calendario.suescuela.com acá e
+	// intranet.suescuela.com para Fichero Escolar al mismo tiempo.
 	const hostname = event.url.hostname;
-	let tenant = null;
+	let tenant: { id: string; name: string; logo_url: string | null; primary_color: string | null; status: string } | null =
+		null;
 
 	if (hostname !== 'localhost' && hostname !== '127.0.0.1' && !hostname.includes('vercel.app') && !hostname.includes('pages.dev')) {
-		const { data: schoolDomain } = await event.locals.supabase
-			.from('schools')
-			.select('id, name, logo_url, primary_color, status')
-			.eq('custom_domain', hostname)
+		const { data: domainRow } = await event.locals.supabase
+			.from('school_domains')
+			.select('schools(id, name, logo_url, primary_color, status)')
+			.eq('domain', hostname)
+			.eq('service', 'agenda')
 			.maybeSingle();
-		
-		if (schoolDomain) {
-			tenant = schoolDomain;
+
+		if (domainRow?.schools) {
+			tenant = domainRow.schools as unknown as {
+				id: string;
+				name: string;
+				logo_url: string | null;
+				primary_color: string | null;
+				status: string;
+			};
 		}
 	}
 	event.locals.tenant = tenant;
