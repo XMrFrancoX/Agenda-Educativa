@@ -30,12 +30,13 @@
     "vite": "^6.3.5"
   },
   "dependencies": {
-    "@lucide/svelte": "^1.22.0",
     "@fullcalendar/core": "^6.1.21",
     "@fullcalendar/daygrid": "^6.1.21",
     "@fullcalendar/interaction": "^6.1.21",
     "@fullcalendar/list": "^6.1.21",
     "@fullcalendar/timegrid": "^6.1.21",
+    "@lucide/svelte": "^1.22.0",
+    "@sentry/sveltekit": "^10.69.0",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.4",
     "clsx": "^2.1.1",
